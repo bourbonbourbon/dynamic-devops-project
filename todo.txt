@@ -1,0 +1,2 @@
+1. Create AWS user for the project
+2. Create Openshift for IaC
