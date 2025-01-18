@@ -1,16 +1,16 @@
-FROM alpine:3.21.2
-
-RUN apk -U upgrade && \
-    apk add --no-cache python3=3.12.8-r1
+FROM python:3.12.8-alpine3.21
 
 WORKDIR /app/
 
-RUN python3 -m venv /opt/venv
+RUN python3 -m venv /opt/venv && \
+    mkdir ./services
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY main.py .env requirements.txt ./
+COPY *.py .env requirements.txt /app/
+
+COPY services /app/services
 
 RUN pip install --no-cache-dir -r ./requirements.txt
 
-CMD ["python3", "./main.py"]
+CMD ["python3", "./app.py"]
