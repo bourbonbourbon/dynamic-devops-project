@@ -15,15 +15,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import app
 from version import __version__
 
+
 @pytest.fixture
 def client():
     with app.test_client() as client_var:
         yield client_var
 
+
 def test_version_success(client):
     response = client.get("/version")
     assert response.status_code == 200
     assert response.json == {"version": __version__}
+
 
 def test_temperature_success(monkeypatch, client):
     mock_datetime = Mock()
