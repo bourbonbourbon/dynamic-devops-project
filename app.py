@@ -27,9 +27,11 @@ def temperature():
         + "Z"
     )
     api = OpenSenseMap(base_url="https://api.opensensemap.org")
-    data, return_code = api.get_all_temperatures(params=date)
+    data, return_code = api.get_avg_temperature(params=date)
     return jsonify(data), return_code
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port="5000")
+    from waitress import serve
+
+    serve(app, host="0.0.0.0", port="8080")
