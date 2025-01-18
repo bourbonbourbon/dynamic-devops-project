@@ -10,11 +10,11 @@ app = Flask(__name__)
 
 @app.route("/version")
 def print_version():
-    return jsonify({"version": __version__})
+    return jsonify({"version": __version__}), 200
 
 
 @app.route("/temperature")
-def temp():
+def temperature():
     date = (
         datetime.datetime.now()
         .replace(
@@ -27,8 +27,8 @@ def temp():
         + "Z"
     )
     api = OpenSenseMap(base_url="https://api.opensensemap.org")
-    data = api.get_all_temperatures(params=date)
-    return jsonify(data)
+    data, return_code = api.get_all_temperatures(params=date)
+    return jsonify(data), return_code
 
 
 if __name__ == "__main__":

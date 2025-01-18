@@ -12,12 +12,9 @@ class OpenSenseMap:
 
     def get_all_temperatures(self, method="GET", params=None, data=None):
         url = f"{self.base_url}/boxes?date={params}&phenomenon=temperature&format=json"
-        try:
-            response = requests.request(
-                method, url, headers=self.headers, params=params, data=data, timeout=15
-            )
-        except requests.exceptions.Timeout:
-            return "Query timed out."
+        response = requests.request(
+            method, url, headers=self.headers, params=params, data=data, timeout=15
+        )
 
         if response.status_code == 200:
 
@@ -36,7 +33,7 @@ class OpenSenseMap:
                             and sensor.get("unit", "") == "°C"
                         ):
                             measurement_date = pandas.to_datetime(
-                                sensor.get("lastMeasurement", {}).get("createdAt", ""),
+                                sensor.get("lastMeasurement").get("createdAt", ""),
                                 utc=True,
                             )
                             current_date = pandas.to_datetime(params, utc=True)
@@ -45,7 +42,7 @@ class OpenSenseMap:
                                 measurement_date - current_date
                             ).total_seconds() // 3600
 
-                            temperature_value = sensor.get("lastMeasurement", {}).get(
+                            temperature_value = sensor.get("lastMeasurement").get(
                                 "value", ""
                             )
 
@@ -56,7 +53,7 @@ class OpenSenseMap:
                             ):
                                 temperature_info.append(float(temperature_value))
 
-            return {"avg_temp": (sum(temperature_info) / len(temperature_info))}
+            return {"avg_temp": (sum(temperature_info) / len(temperature_info))}, 200
 
         else:
-            return f"Error: {response.status_code}, {response.text}"
+            return {"err_msg": f"Error: {response.status_code}, {response.text}"}, 503
