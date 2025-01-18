@@ -31,7 +31,10 @@ class OpenSenseMap:
                 for sensor in sensors:
                     if sensor.get("icon") == "osem-thermometer":
 
-                        if sensor.get("lastMeasurement", "") != "" and sensor.get("unit", "") == "°C":
+                        if (
+                            sensor.get("lastMeasurement", "") != ""
+                            and sensor.get("unit", "") == "°C"
+                        ):
                             measurement_date = pandas.to_datetime(
                                 sensor.get("lastMeasurement", {}).get("createdAt", ""),
                                 utc=True,
