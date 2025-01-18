@@ -56,7 +56,7 @@ class OpenSenseMap:
                             ):
                                 temperature_info.append(float(temperature_value))
 
-            return str((sum(temperature_info) / len(temperature_info)))
+            return {"avg_temp": (sum(temperature_info) / len(temperature_info))}
 
         else:
             return f"Error: {response.status_code}, {response.text}"

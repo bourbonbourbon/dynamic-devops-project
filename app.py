@@ -1,7 +1,7 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
 import datetime
-from flask import Flask
+from flask import Flask, jsonify
 from version import __version__
 from services.opensensemap import OpenSenseMap
 
@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route("/version")
 def print_version():
-    return __version__
+    return jsonify({"version": __version__})
 
 
 @app.route("/temperature")
@@ -28,7 +28,7 @@ def temp():
     )
     api = OpenSenseMap(base_url="https://api.opensensemap.org")
     data = api.get_all_temperatures(params=date)
-    return data
+    return jsonify(data)
 
 
 if __name__ == "__main__":
