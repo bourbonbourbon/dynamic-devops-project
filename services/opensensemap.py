@@ -14,7 +14,7 @@ class OpenSenseMap:
     def get_avg_temperature(self, method="GET", params=None, data=None):
         url = f"{self.base_url}/boxes?date={params}&phenomenon=temperature&format=json"
         response = requests.request(
-            method, url, headers=self.headers, params=params, data=data, timeout=15
+            method, url, headers=self.headers, params=params, data=data, timeout=60
         )
         self.current_date = params
 
