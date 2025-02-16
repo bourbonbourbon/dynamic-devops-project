@@ -25,15 +25,17 @@ def test_version_success(client):
     assert response.status_code == 200
     assert response.json == {"version": __version__}
 
+
 # https://stackoverflow.com/a/73476629
 class MockedDatetime(datetime.datetime):
     @classmethod
     def now(cls):
         return datetime.datetime(2025, 1, 15, 0, 0, 0)
 
+
 def test_temperature_success(monkeypatch, client):
     with monkeypatch.context() as mpc:
-        mpc.setattr(datetime, 'datetime', MockedDatetime)
+        mpc.setattr(datetime, "datetime", MockedDatetime)
         response = client.get("/temperature")
         assert response.status_code == 200
         assert response.json == {"avg_temp": 19.71}
