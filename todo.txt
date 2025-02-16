@@ -1,3 +1,8 @@
 1. Create AWS user for the project
 2. Create Openshift for IaC
 3. [$(curl -s http://localhost:8080/version | jq ".version") = $(grep -i version version.py | cut -d "=" -f 2)]
+4. Docker Content Trust
+5. Docker BuiltKit for secrets
+6. Trivy
+7. Use build cache
+8. output of linting and unit tests as xml
