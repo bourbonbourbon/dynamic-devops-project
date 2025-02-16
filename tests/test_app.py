@@ -6,7 +6,6 @@
 import sys
 import os
 import datetime
-from unittest.mock import Mock
 import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
