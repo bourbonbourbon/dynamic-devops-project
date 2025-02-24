@@ -16,6 +16,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Setup venv
+        run: |
+          python -m venv $PWD/venv
+          export PATH="$PWD/venv:$PATH"
+          pip install -r ./requirements.txt
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -27,38 +33,67 @@ jobs:
 
       - name: Linting Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
-          with:
-            dockerfile: Dockerfile
+        with:
+          dockerfile: Dockerfile
 
   build:
+    runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Extract version number
         run: |
           ver=$(grep -oP '"[\S]*"' version.py | cut -d'"' -f2)
           echo "Version=$ver" >> "$GITHUB_ENV"
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ vars.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/ddp:${{ env.Version }}
+          push: false
+          # tags: ${{ vars.DOCKERHUB_USERNAME }}/ddp:${{ env.Version }}
+          tags: ddp:${{ env.Version }}
+          target: prod
 
   unittests:
+    runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup venv
+        run: |
+          python -m venv $PWD/venv
+          export PATH="$PWD/venv:$PATH"
+          pip install -r ./requirements.txt
+      
       - name: Install pytest
         run: |
-          pip install pylint
-
+          pip install pytest
+      
       - name: Run pytest
         run: |
           pytest
+
+  version-check:
+    # probably run that in the docker build job?
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Docker Image
+        run: |
+          docker run -d -p 8080:8080 ddp:${{ env.Version }}
+      
+      - name: Version Check
+        run: |
+          sleep 2 && \
+          if [ $(curl -s http://localhost:8080/version | jq ".version") == $(grep -i version version.py | cut -d "=" -f 2) ]; then echo "Version Check Successful"; else echo "Version Check Failed"; fi
