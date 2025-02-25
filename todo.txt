@@ -1,11 +1,5 @@
 1. Create AWS user for the project
 2. Create Openshift for IaC
-3. docker build --target prod -t dd:1.0 .
-docker run -d -p 8080:8080 --name dd-1.0 dd:1.0
-sleep 2 && if [ $(curl -s http://localhost:8080/version | jq ".version") == $(grep -i version version.py | cut -d "=" -f 2) ]; then echo "Version Check Successful"; else echo "Version Check Failed"; fi
-docker stop dd-1.0
-docker rm dd-1.0
-
 4. Docker Content Trust
 5. Docker BuiltKit for secrets
 6. Trivy
