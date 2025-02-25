@@ -29,8 +29,22 @@ class OpenSenseMap:
             temperature_info.extend(self._get_sensor_temperatures(sensors, date))
 
         if temperature_info:
-            return {"avg_temp": sum(temperature_info) / len(temperature_info)}
-        return {"avg_temp": 0}
+            avg_temp = sum(temperature_info) / len(temperature_info)
+            status = ""
+            if avg_temp < 10:
+                status = "Too Cold"
+            elif 11 <= avg_temp <= 36:
+                status = "Good"
+            else:
+                status = "Too Hot"
+            return {
+                "avg_temp": avg_temp,
+                "status": status
+            }
+        return {
+            "avg_temp": 0,
+            "status": "Internal Error"
+        }
 
     def _get_sensor_temperatures(self, sensors, date):
         temperatures = []
