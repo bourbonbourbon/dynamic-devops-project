@@ -38,4 +38,7 @@ def test_temperature_success(monkeypatch, client):
         mpc.setattr(datetime, "datetime", MockedDatetime)
         response = client.get("/temperature")
         assert response.status_code == 200
-        assert response.json == {"avg_temp": 19.71}
+        assert response.json == {
+            "avg_temp": 19.71,
+            "status": "Good"
+            }
