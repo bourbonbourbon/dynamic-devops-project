@@ -14,17 +14,18 @@ COPY services /app/services
 RUN pip install --no-cache-dir -r ./requirements.txt
 
 USER nobody
-# use nobody user earlier
+# too much of a hassle moving this up
 
 CMD ["python3", "./app.py"]
 
-FROM prod AS dev
+# FROM prod AS dev
 
-USER root
+# USER root
 
-RUN apk add --no-cache curl=8.12.1-r0
+# RUN apk add --no-cache curl=8.12.1-r0
 
-USER nobody
+# USER nobody
 
-CMD ["curl", "-s http://localhost:8080/version"]
+# CMD ["curl", "-s http://localhost:8080/version"]
 # probably can do nohup python3 app.py & 2>&1 1>/dev/null && curl -s http://localhost:8080/version
+# but the other thing works so eh
