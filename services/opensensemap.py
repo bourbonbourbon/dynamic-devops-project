@@ -37,14 +37,8 @@ class OpenSenseMap:
                 status = "Good"
             else:
                 status = "Too Hot"
-            return {
-                "avg_temp": avg_temp,
-                "status": status
-            }
-        return {
-            "avg_temp": 0,
-            "status": "Internal Error"
-        }
+            return {"avg_temp": avg_temp, "status": status}
+        return {"avg_temp": 0, "status": "Internal Error"}
 
     def _get_sensor_temperatures(self, sensors, date):
         temperatures = []

@@ -33,12 +33,10 @@ class MockedDatetime(datetime.datetime):
         return datetime.datetime(2025, 1, 15, 0, 0, 0)
 
 
+# change implementation
 def test_temperature_success(monkeypatch, client):
     with monkeypatch.context() as mpc:
         mpc.setattr(datetime, "datetime", MockedDatetime)
         response = client.get("/temperature")
         assert response.status_code == 200
-        assert response.json == {
-            "avg_temp": 19.71,
-            "status": "Good"
-            }
+        assert response.json == {"avg_temp": 19.71, "status": "Good"}
