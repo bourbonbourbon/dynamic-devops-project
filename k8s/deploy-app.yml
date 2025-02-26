@@ -1,0 +1,38 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: ddp-app # name of single pod
+  labels:
+    app: ddp # name of a collection of pods
+spec:
+  containers:
+    - name: ddp
+      image: ddp:0.1.1 # change this after pushing the image to a registry
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: ddp-service
+spec:
+  selector:
+    app: ddp
+  ports:
+    - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+spec:
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: ddp-service
+                port:
+                  number: 8080
+---
+
