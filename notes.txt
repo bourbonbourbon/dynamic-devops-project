@@ -1,0 +1,2 @@
+kind load docker-image ddp:0.1.1 to load local docker image into the kind cluster
+https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
