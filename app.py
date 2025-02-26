@@ -2,6 +2,7 @@
 # pylint: disable=missing-function-docstring
 import datetime
 from prometheus_client import Counter, generate_latest
+from dotenv import dotenv_values
 from flask import Flask, jsonify
 from version import __version__
 from services.opensensemap import OpenSenseMap
@@ -9,11 +10,17 @@ from services.opensensemap import OpenSenseMap
 total_version_requests = Counter("version_requests", "Total Number of version requests")
 total_temp_requests = Counter("temp_requests", "Total Number of temperature requests")
 
+BASE_URL = "https://api.opensensemap.org"
+
+config = dotenv_values(".env")
+
 app = Flask(__name__)
+
 
 @app.route("/metrics")
 def metrics():
     return generate_latest()
+
 
 @app.route("/version")
 def print_version():
@@ -34,7 +41,7 @@ def temperature():
         .isoformat()
         + "Z"
     )
-    api = OpenSenseMap(base_url="https://api.opensensemap.org")
+    api = OpenSenseMap(base_url=BASE_URL)
     data, return_code = api.get_avg_temperature(params=date)
     total_temp_requests.inc()
     return jsonify(data), return_code
@@ -43,4 +50,4 @@ def temperature():
 if __name__ == "__main__":
     from waitress import serve
 
-    serve(app, host="0.0.0.0", port="8080")
+    serve(app, host=config["HOST"], port=config["PORT"])
