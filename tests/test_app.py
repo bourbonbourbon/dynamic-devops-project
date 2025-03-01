@@ -40,3 +40,5 @@ def test_temperature_success(monkeypatch, client):
         response = client.get("/temperature")
         assert response.status_code == 200
         assert response.json == {"avg_temp": 19.71, "status": "Good"}
+
+# write failure tests
