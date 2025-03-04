@@ -7,3 +7,14 @@
 8. output of linting and unit tests as xml
 10. CHECK https://opensource.com/article/21/9/unit-test-python for tests use the .json thing
 11. use the sensebox ids given on the website https://opensensemap.org/explore/5eba5fbad46fb8001b799786
+12. use faked_json.json
+13. for /metricz fake the availability or refactor the code or something
+14. check the warnings from terrascan
+15. check security tab
+
+5eba5fbad46fb8001b799786
+5a77184229b729001a150c10
+6448d061258367000707ec8b
+5e5fc72957703e001b7b1f0a
+5eb3d2ea9724e9001ce71aa9
+5f70d5b9a98020001bbd2c89
