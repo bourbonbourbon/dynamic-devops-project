@@ -5,7 +5,9 @@
 # pylint: disable=redefined-outer-name
 import sys
 import os
-import datetime
+from http import HTTPStatus
+import json
+from unittest.mock import patch
 import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,23 +24,22 @@ def client():
 
 def test_version_success(client):
     response = client.get("/version")
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
     assert response.json == {"version": __version__}
 
 
-# https://stackoverflow.com/a/73476629
-class MockedDatetime(datetime.datetime):
-    @classmethod
-    def now(cls):
-        return datetime.datetime(2025, 1, 15, 0, 0, 0)
+@pytest.fixture()
+def mock_response():
+    with patch("requests.request") as mock_req:
+        yield mock_req
 
-
-# change implementation
-def test_temperature_success(monkeypatch, client):
-    with monkeypatch.context() as mpc:
-        mpc.setattr(datetime, "datetime", MockedDatetime)
+def test_temperature_success(mock_response, client):
+    with open("tests/weather.json", encoding="UTF-8") as f:
+        mock_response.return_value.status_code = HTTPStatus.OK
+        mock_response.return_value.json.return_value = json.load(f)
         response = client.get("/temperature")
-        assert response.status_code == 200
-        assert response.json == {"avg_temp": 19.71, "status": "Good"}
+        assert response.status_code == HTTPStatus.OK
+        assert response.json == ({"avg_temp": 6.77, "status": "Too Cold"})
 
 # write failure tests
+# /metrics
