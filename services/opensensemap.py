@@ -2,22 +2,22 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 import datetime
+from http import HTTPStatus
 import requests
-import json
 
 
 class OpenSenseMap:
     def __init__(self, base_url):
         self.base_url = base_url
 
-    def get_avg_temperature(self, method="GET", sense_boxes=None):
+    def get_avg_temperature(self, sense_boxes=None):
         temperature_info = []
 
         for sense_box in sense_boxes:
             url = f"{self.base_url}/boxes/{sense_box}?format=json"
-            response = requests.request(method, url, timeout=15)
+            response = requests.request("GET", url, timeout=15)
 
-            if response.status_code == 200:
+            if response.status_code == HTTPStatus.OK:
                 temperature_info.append(self._process_temperature_data(response.json()))
             else:
                 pass  # check stage increment a failure counter
@@ -31,9 +31,15 @@ class OpenSenseMap:
                 status = "Good"
             else:
                 status = "Too Hot"
-            return json.dumps({"avg_temp": round(avg_temp, 2), "status": status}), 200
+            return (
+                ({"avg_temp": round(avg_temp, 2), "status": status}),
+                HTTPStatus.OK,
+            )
 
-        return json.dumps({"avg_temp": 0, "status": "Internal Error"}), 200
+        return (
+            ({"avg_temp": 0, "status": "Internal Error"}),
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
 
     def _process_temperature_data(self, data):
         sensors = data.get("sensors", [])
@@ -65,4 +71,4 @@ class OpenSenseMap:
                     if date_diff_in_hours < 24 and temperature_value != "":
                         return float(temperature_value)
 
-        return None
+        return None  # handle none
