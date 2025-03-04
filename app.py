@@ -1,6 +1,6 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
-import datetime
+# import datetime
 from prometheus_client import Counter, generate_latest
 from dotenv import dotenv_values
 from flask import Flask, jsonify
@@ -13,6 +13,8 @@ total_temp_requests = Counter("temp_requests", "Total Number of temperature requ
 BASE_URL = "https://api.opensensemap.org"
 
 config = dotenv_values(".env")
+
+senseBoxes = config["SENSEBOXES"].split(",")
 
 app = Flask(__name__)
 
@@ -30,19 +32,8 @@ def print_version():
 
 @app.route("/temperature")
 def temperature():
-    date = (
-        datetime.datetime.now()
-        .replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-        .isoformat()
-        + "Z"
-    )
     api = OpenSenseMap(base_url=BASE_URL)
-    data, return_code = api.get_avg_temperature(params=date)
+    data, return_code = api.get_avg_temperature(sense_boxes=senseBoxes)
     total_temp_requests.inc()
     return jsonify(data), return_code
 

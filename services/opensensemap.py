@@ -3,30 +3,24 @@
 # pylint: disable=missing-class-docstring
 import datetime
 import requests
+import json
 
 
 class OpenSenseMap:
-    def __init__(self, base_url, headers=None):
+    def __init__(self, base_url):
         self.base_url = base_url
-        self.headers = headers
 
-    def get_avg_temperature(self, method="GET", params=None, data=None):
-        url = f"{self.base_url}/boxes?date={params}&phenomenon=temperature&format=json"
-        response = requests.request(
-            method, url, headers=self.headers, params=params, data=data, timeout=120
-        )
-
-        if response.status_code == 200:
-            return self._process_temperature_data(response.json(), params), 200
-
-        return {"err_msg": f"Error: {response.status_code}, {response.text}"}, 503
-
-    def _process_temperature_data(self, data, date):
+    def get_avg_temperature(self, method="GET", sense_boxes=None):
         temperature_info = []
 
-        for entry in data:
-            sensors = entry.get("sensors", [])
-            temperature_info.extend(self._get_sensor_temperatures(sensors, date))
+        for sense_box in sense_boxes:
+            url = f"{self.base_url}/boxes/{sense_box}?format=json"
+            response = requests.request(method, url, timeout=15)
+
+            if response.status_code == 200:
+                temperature_info.append(self._process_temperature_data(response.json()))
+            else:
+                pass  # check stage increment a failure counter
 
         if temperature_info:
             avg_temp = sum(temperature_info) / len(temperature_info)
@@ -37,13 +31,24 @@ class OpenSenseMap:
                 status = "Good"
             else:
                 status = "Too Hot"
-            return {"avg_temp": avg_temp, "status": status}
-        return {"avg_temp": 0, "status": "Internal Error"}
+            return json.dumps({"avg_temp": round(avg_temp, 2), "status": status}), 200
 
-    def _get_sensor_temperatures(self, sensors, date):
-        temperatures = []
-        current_date = datetime.datetime.fromisoformat(date)
-        print(current_date, type(current_date))
+        return json.dumps({"avg_temp": 0, "status": "Internal Error"}), 200
+
+    def _process_temperature_data(self, data):
+        sensors = data.get("sensors", [])
+
+        current_date = datetime.datetime.fromisoformat(
+            datetime.datetime.now()
+            .replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+            .isoformat()
+            + "Z"
+        )
 
         for sensor in sensors:
             if sensor.get("icon") == "osem-thermometer":
@@ -58,6 +63,6 @@ class OpenSenseMap:
                     temperature_value = last_measurement.get("value", "")
 
                     if date_diff_in_hours < 24 and temperature_value != "":
-                        temperatures.append(float(temperature_value))
+                        return float(temperature_value)
 
-        return temperatures
+        return None
