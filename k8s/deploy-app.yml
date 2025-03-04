@@ -8,6 +8,19 @@ spec:
   containers:
     - name: ddp
       image: ddp:0.1.1 # change this after pushing the image to a registry
+      resources:
+        requests:
+          memory: 64Mi
+          cpu: 250m
+        limits:
+          memory: 128Mi
+          cpu: 500m
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        readOnlyRootFileSystem: true
+  securityContext:
+    runAsNonRoot: true
 ---
 kind: Service
 apiVersion: v1
