@@ -72,6 +72,8 @@ jobs:
     # https://github.com/nektos/act/issues/329#issuecomment-1187246629
     runs-on: ubuntu-latest
     needs: unittests
+    permissions:
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
