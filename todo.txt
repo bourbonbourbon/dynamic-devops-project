@@ -5,9 +5,11 @@
 6. Trivy
 7. Use build cache
 8. output of linting and unit tests as xml
-12. use faked_json.json
-14. check the warnings from terrascan
 15. check security tab
 16. resolve comments
 17. git hooks for formatting code?
 18. run black
+19. create .vscode for extensions
+20. create a sonarqube server? use terraform?
+21. Create a GitHub Actions workflow for CD.??
+22. test if k8s is working correctly after the security context update
