@@ -33,6 +33,7 @@ def mock_response():
     with patch("requests.request") as mock_req:
         yield mock_req
 
+
 def test_temperature_success(mock_response, client):
     with open("tests/weather.json", encoding="UTF-8") as f:
         mock_response.return_value.status_code = HTTPStatus.OK
@@ -40,6 +41,7 @@ def test_temperature_success(mock_response, client):
         response = client.get("/temperature")
         assert response.status_code == HTTPStatus.OK
         assert response.json == ({"avg_temp": 6.77, "status": "Too Cold"})
+
 
 # write failure tests
 # /metrics
