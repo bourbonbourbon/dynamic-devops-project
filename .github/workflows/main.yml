@@ -101,13 +101,6 @@ jobs:
           platforms: linux/amd64
           tags: ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
           target: prod
-          outputs: type=docker,dest=${{ runner.temp }}/myimage.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: myimage
-          path: ${{ runner.temp }}/myimage.tar
 
   version-check:
     # https://docs.docker.com/build/ci/github-actions/share-image-jobs/
@@ -123,19 +116,9 @@ jobs:
           ver=$(grep -oP '"[\S]*"' version.py | cut -d'"' -f2)
           echo "Version=$ver" >> "$GITHUB_ENV"
 
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: myimage
-          path: ${{ runner.temp }}
-
-      - name: Load image
-        run: |
-          docker load --input ${{ runner.temp }}/myimage.tar
-
       - name: Run Docker Image
         run: |
-          docker run -d -p 8080:8080 --name ddp ddp:${{ env.Version }}
+          docker run -d -p 8080:8080 --name ddp ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
 
       - name: Version Check
         run: |
