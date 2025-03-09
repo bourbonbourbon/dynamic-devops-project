@@ -7,18 +7,19 @@ metadata:
 spec:
   containers:
     - name: ddp
-      image: ddp:0.1.1 # change this after pushing the image to a registry
+      image: ghcr.io/bourbonbourbon/ddp:0.2.1
       resources:
         requests:
-          memory: 64Mi
-          cpu: 250m
-        limits:
-          memory: 128Mi
+          memory: 32Mi
           cpu: 500m
+        limits:
+          memory: 64Mi
+          cpu: 600m
       securityContext:
         allowPrivilegeEscalation: false
-        runAsNonRoot: true
-        readOnlyRootFileSystem: true
+        runAsUser: 65534 # nobody
+        readOnlyRootFilesystem: true
+        privileged: false
   securityContext:
     runAsNonRoot: true
 ---
@@ -35,7 +36,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: example-ingress
+  name: ingress
 spec:
   rules:
     - http:
