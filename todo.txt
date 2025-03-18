@@ -12,4 +12,4 @@
 19. create .vscode for extensions
 20. create a sonarqube server? use terraform?
 21. Create a GitHub Actions workflow for CD.??
-22. test if k8s is working correctly after the security context update
+23. https://kind.sigs.k8s.io/docs/user/ingress/

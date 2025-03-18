@@ -1,2 +1,24 @@
 kind load docker-image ddp:0.1.1 to load local docker image into the kind cluster
 https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
+
+   kind create cluster --config k8s/kind.yaml 
+   kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
+   kubectl wait --namespace ingress-nginx   --for=condition=ready pod   --selector=app.kubernetes.io/component=controller   --timeout=90s
+   kubectl apply -f k8s/deploy-app.yml
+
+   mkdir -p ${HOME}/minio/data
+
+   docker run \
+      -p 9000:9000 \
+      -p 9001:9001 \
+      --user $(id -u):$(id -g) \
+      --name minio1 \
+      -e "MINIO_ROOT_USER=ROOTUSER" \
+      -e "MINIO_ROOT_PASSWORD=CHANGEME123" \
+      -v ${HOME}/minio/data:/data \
+      quay.io/minio/minio server /data --console-address ":9001"
+
+   docker run -p 6379:6379 -it valkey/valkey:latest
+
+   * * * * * { printf "%s: " "$(date "+%F %T")"; curl -s http://localhost:8080/temperature | jq ; } >> /tmp/test.txt 2>&1
+   * * * * * (curl -s http://localhost:8080/temperature)
