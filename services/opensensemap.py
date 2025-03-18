@@ -15,7 +15,13 @@ class OpenSenseMap:
 
         for sense_box in sense_boxes:
             url = f"{self.base_url}/boxes/{sense_box}?format=json"
-            response = requests.request("GET", url, timeout=15)
+            try:
+                response = requests.request("GET", url, timeout=60)
+            except Exception:
+                return (
+                    ({"avg_temp": 0, "status": "Internal Error"}),
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                )
 
             if response.status_code == HTTPStatus.OK:
                 temperature_info.append(self._process_temperature_data(response.json()))
@@ -25,9 +31,9 @@ class OpenSenseMap:
         if temperature_info:
             avg_temp = sum(temperature_info) / len(temperature_info)
             status = ""
-            if avg_temp < 10:
+            if avg_temp <= 10:
                 status = "Too Cold"
-            elif 11 <= avg_temp <= 36:
+            elif 10 < avg_temp <= 36:
                 status = "Good"
             else:
                 status = "Too Hot"
