@@ -9,6 +9,7 @@ import requests
 class OpenSenseMap:
     def __init__(self, base_url):
         self.base_url = base_url
+        self.fail_count = 0
 
     def get_avg_temperature(self, sense_boxes=None):
         temperature_info = []
@@ -21,6 +22,7 @@ class OpenSenseMap:
                 return (
                     ({"avg_temp": 0, "status": "Internal Error"}),
                     HTTPStatus.INTERNAL_SERVER_ERROR,
+                    self.fail_count,
                 )
 
             if response.status_code == HTTPStatus.OK:
@@ -28,7 +30,7 @@ class OpenSenseMap:
                     self._process_temperature_data(data=response.json())
                 )
             else:
-                pass  # check stage increment a failure counter
+                self.fail_count += 1
 
         if temperature_info:
             avg_temp = sum(temperature_info) / len(temperature_info)
@@ -42,11 +44,13 @@ class OpenSenseMap:
             return (
                 ({"avg_temp": round(number=avg_temp, ndigits=2), "status": status}),
                 HTTPStatus.OK,
+                self.fail_count,
             )
 
         return (
             ({"avg_temp": 0, "status": "Internal Error"}),
             HTTPStatus.INTERNAL_SERVER_ERROR,
+            self.fail_count,
         )
 
     def _process_temperature_data(self, data):
@@ -79,4 +83,4 @@ class OpenSenseMap:
                     if date_diff_in_hours < 24 and temperature_value != "":
                         return float(temperature_value)
 
-        return None  # handle none
+        return None

@@ -4,7 +4,6 @@
 import io
 import json
 import ast
-import datetime
 from http import HTTPStatus
 import minio
 import valkey
@@ -44,6 +43,8 @@ minio_client = minio.Minio(
 
 valkey_client = valkey.Valkey(host=config["VKURL"], port=config["VKPORT"], db=0)
 
+SENSEBOX_FAIL_COUNT = 0
+
 
 @app.route(rule="/metrics")
 def metrics():
@@ -54,6 +55,25 @@ def metrics():
 def print_version():
     total_version_requests.inc()
     return jsonify({"version": __version__}), 200
+
+
+def query_main_and_store():
+    api = OpenSenseMap(base_url=BASE_URL)
+    data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
+    global SENSEBOX_FAIL_COUNT
+    SENSEBOX_FAIL_COUNT = fail_count
+
+    data_as_bytes = str(object=data).encode(encoding="UTF-8")
+    data_to_minio_stream = io.BytesIO(initial_bytes=data_as_bytes)
+    minio_client.put_object(
+        bucket_name=bucket_name,
+        object_name=object_name,
+        data=data_to_minio_stream,
+        length=len(data_as_bytes),
+    )
+
+    valkey_client.set(name="avg-temp", value=str(object=data), ex=3000)
+    return jsonify(data), return_code
 
 
 @app.route(rule="/temperature")
@@ -67,41 +87,40 @@ def temperature():
         )
         if v_value.get("status") == "Internal Error":
             return jsonify(v_value), HTTPStatus.INTERNAL_SERVER_ERROR
-        else:
-            return jsonify(v_value), HTTPStatus.OK
-    api = OpenSenseMap(base_url=BASE_URL)
-    data, return_code = api.get_avg_temperature(sense_boxes=senseBoxes)
-
-    data_as_bytes = str(object=data).encode(encoding="UTF-8")
-    data_to_minio_stream = io.BytesIO(initial_bytes=data_as_bytes)
-    minio_client.put_object(
-        bucket_name=bucket_name,
-        object_name=object_name,
-        data=data_to_minio_stream,
-        length=len(data_as_bytes),
-    )
-
-    valkey_client.set(name="avg-temp", value=str(object=data), ex=3000)
+        return jsonify(v_value), HTTPStatus.OK
 
     total_temp_requests.inc()
-    return jsonify(data), return_code
+    return query_main_and_store()
 
 
 @app.route(rule="/store")
 def store():
+    query_main_and_store()
     total_store_requests.inc()
     return temperature()
 
 
 @app.route(rule="/readyz")
 def readyz():
-    # prometheus
-    pass
+    most_sense_boxes_working = SENSEBOX_FAIL_COUNT < (len(senseBoxes) // 2) + 1
+    v_value = valkey_client.get(name="avg-temp")
+    v_ttl = valkey_client.ttl(name="avg-temp")
+
+    if most_sense_boxes_working and v_value is not None and v_ttl > 1:
+        return str(SENSEBOX_FAIL_COUNT), HTTPStatus.OK
+    return str(SENSEBOX_FAIL_COUNT), HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+# Hacky way to populate cache, s3 and senseBox_fail_count
+@app.before_request
+def first_temp_query():
+    app.before_request_funcs[None].remove(first_temp_query)
+    temperature()
 
 
 if __name__ == "__main__":
-    bucket_found = minio_client.bucket_exists(bucket_name=bucket_name)
-    if not bucket_found:
+    BUCKET_FOUND = minio_client.bucket_exists(bucket_name=bucket_name)
+    if not BUCKET_FOUND:
         minio_client.make_bucket(bucket_name=bucket_name)
 
     from waitress import serve
