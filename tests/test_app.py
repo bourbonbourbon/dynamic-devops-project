@@ -10,7 +10,9 @@ import json
 from unittest.mock import patch
 import pytest
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(
+    object=os.path.dirname(os.path.dirname(p=os.path.abspath(path=__file__)))
+)
 
 from app import app
 from version import __version__
@@ -35,7 +37,7 @@ def mock_response():
 
 
 def test_temperature_success(mock_response, client):
-    with open("tests/weather.json", encoding="UTF-8") as f:
+    with open(file="tests/weather.json", encoding="UTF-8") as f:
         mock_response.return_value.status_code = HTTPStatus.OK
         mock_response.return_value.json.return_value = json.load(f)
         response = client.get("/temperature")
