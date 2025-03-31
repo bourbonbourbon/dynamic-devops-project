@@ -63,9 +63,25 @@ jobs:
         run: |
           pip install pytest
 
+      - name: Run valkey docker
+        run: |
+          docker run -d -p 6379:6379 --name valkey valkey/valkey:latest
+
+      - name: Run minio docker
+        run: |
+          mkdir -p ${HOME}/minio/data:/data
+          docker run -d -p 9000:9000 --user $(id -u):$(id -g) \
+            --name minio -e "MINIO_ROOT_USER=ROOTUSER" -e "MINIO_ROOT_PASSWORD=CHANGEME123" \
+            -v ${HOME}/minio/data:/data quay.io/minio/minio server /data
+
       - name: Run pytest
         run: |
           pytest
+
+      - name: Stop and remove valkey & minio containers
+        run: |
+          docker stop valkey minio
+          docker rm valkey minio
 
   build:
     # https://docs.docker.com/build/ci/github-actions/share-image-jobs/
