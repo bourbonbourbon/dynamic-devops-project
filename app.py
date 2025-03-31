@@ -41,6 +41,10 @@ minio_client = minio.Minio(
     secure=False,
 )
 
+BUCKET_FOUND = minio_client.bucket_exists(bucket_name=bucket_name)
+if not BUCKET_FOUND:
+    minio_client.make_bucket(bucket_name=bucket_name)
+
 valkey_client = valkey.Valkey(host=config["VKURL"], port=config["VKPORT"], db=0)
 
 SENSEBOX_FAIL_COUNT = 0
@@ -112,17 +116,14 @@ def readyz():
 
 
 # Hacky way to populate cache, s3 and senseBox_fail_count
-@app.before_request
-def first_temp_query():
-    app.before_request_funcs[None].remove(first_temp_query)
-    temperature()
+# messes with unittests
+# @app.before_request
+# def first_temp_query():
+#     app.before_request_funcs[None].remove(first_temp_query)
+#     temperature()
 
 
 if __name__ == "__main__":
-    BUCKET_FOUND = minio_client.bucket_exists(bucket_name=bucket_name)
-    if not BUCKET_FOUND:
-        minio_client.make_bucket(bucket_name=bucket_name)
-
     from waitress import serve
 
     serve(app=app, host=config["HOST"], port=config["PORT"])

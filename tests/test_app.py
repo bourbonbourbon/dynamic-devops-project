@@ -11,12 +11,11 @@ from unittest.mock import patch
 import pytest
 
 sys.path.append(
-    object=os.path.dirname(os.path.dirname(p=os.path.abspath(path=__file__)))
+    os.path.dirname(os.path.dirname(p=os.path.abspath(path=__file__)))
 )
 
 from app import app
 from version import __version__
-
 
 @pytest.fixture
 def client():
@@ -29,15 +28,9 @@ def test_version_success(client):
     assert response.status_code == HTTPStatus.OK
     assert response.json == {"version": __version__}
 
-
-@pytest.fixture()
-def mock_response():
-    with patch("requests.request") as mock_req:
-        yield mock_req
-
-
+@patch("requests.request")
 def test_temperature_success(mock_response, client):
-    with open(file="tests/weather.json", encoding="UTF-8") as f:
+    with open(file="tests/weather.json", mode="r", encoding="UTF-8") as f:
         mock_response.return_value.status_code = HTTPStatus.OK
         mock_response.return_value.json.return_value = json.load(f)
         response = client.get("/temperature")
