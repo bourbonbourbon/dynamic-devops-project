@@ -69,15 +69,14 @@ jobs:
 
       - name: Run minio docker
         run: |
-          mkdir -p ${HOME}/minio/data:/data
+          mkdir -p ${HOME}/minio/data
           docker run -d -p 9000:9000 --user $(id -u):$(id -g) \
             --name minio -e "MINIO_ROOT_USER=ROOTUSER" -e "MINIO_ROOT_PASSWORD=CHANGEME123" \
             -v ${HOME}/minio/data:/data quay.io/minio/minio server /data
 
       - name: Run pytest
         run: |
-          # pytest
-          curl http://localhost:9000
+          pytest
 
       - name: Stop and remove valkey & minio containers
         run: |
