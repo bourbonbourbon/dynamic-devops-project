@@ -14,3 +14,11 @@
 21. Create a GitHub Actions workflow for CD.??
 23. https://kind.sigs.k8s.io/docs/user/ingress/
 24. create dockercompose so that i don't have to use the root user?
+Ensure that documentation is provided on how to test the application.
+code integration tests
+Use SonarQube Quality Gate check action, also consider Semgrep
+Setup OpenSSF Scorecard GitHub Action and fix any issues reported by it.
+Best practices when adopting continuous integration
+keep appy.py clean
+By default, the application will store the data every 5 minutes don't use cron
+implement code 5.2 metrics and other things after that
