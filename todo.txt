@@ -22,3 +22,5 @@ Best practices when adopting continuous integration
 keep appy.py clean
 By default, the application will store the data every 5 minutes don't use cron
 implement code 5.2 metrics and other things after that
+use digests wherever applicable
+don't push directly to main
