@@ -14,3 +14,4 @@
 21. Create a GitHub Actions workflow for CD.??
 23. https://kind.sigs.k8s.io/docs/user/ingress/
 24. create dockercompose so that i don't have to use the root user?
+code coverage
