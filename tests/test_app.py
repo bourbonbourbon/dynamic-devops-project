@@ -10,10 +10,6 @@ import json
 from unittest.mock import patch
 import pytest
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(p=os.path.abspath(path=__file__)))
-)
-
 from app import app
 from version import __version__
 

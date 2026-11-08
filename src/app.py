@@ -5,6 +5,7 @@ import io
 import json
 import ast
 from http import HTTPStatus
+from pathlib import Path
 import minio
 import valkey
 from prometheus_client import Counter, generate_latest
@@ -26,7 +27,9 @@ total_store_requests = Counter(
 
 BASE_URL = "https://api.opensensemap.org"
 
-config = dotenv_values(dotenv_path=".env")
+config = dotenv_values(
+    dotenv_path=Path(__file__).resolve().parent.parent / ".env"
+)
 
 senseBoxes = config["SENSEBOXES"].split(sep=",")
 

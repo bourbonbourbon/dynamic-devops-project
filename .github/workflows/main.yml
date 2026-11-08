@@ -29,7 +29,7 @@ jobs:
 
       - name: Analysing the code with pylint
         run: |
-          pylint --fail-under=9 *.py services tests
+          pylint --fail-under=9 src tests
 
       - name: Linting Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -96,7 +96,7 @@ jobs:
 
       - name: Extract version number
         run: |
-          ver=$(grep -oP '"[\S]*"' version.py | cut -d'"' -f2)
+          ver=$(grep -oP '"[\S]*"' src/version.py | cut -d'"' -f2)
           echo "Version=$ver" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
@@ -129,7 +129,7 @@ jobs:
 
       - name: Extract version number
         run: |
-          ver=$(grep -oP '"[\S]*"' version.py | cut -d'"' -f2)
+          ver=$(grep -oP '"[\S]*"' src/version.py | cut -d'"' -f2)
           echo "Version=$ver" >> "$GITHUB_ENV"
 
       - name: Run Docker Image
@@ -138,8 +138,15 @@ jobs:
 
       - name: Version Check
         run: |
-          sleep 2 && \
-          if [ $(curl -s http://localhost:8080/version | jq ".version") == $(grep -i version version.py | cut -d "=" -f 2) ]; then echo "Version Check Successful"; else echo "Version Check Failed"; fi
+          sleep 2
+          expected=$(grep -i version src/version.py | cut -d "=" -f 2 | tr -d ' "')
+          actual=$(curl -s http://localhost:8080/version | jq -r ".version")
+          if [ "$actual" = "$expected" ]; then
+            echo "Version Check Successful"
+          else
+            echo "Version Check Failed"
+            exit 1
+          fi
 
       - name: Stop and Remove Docker Container
         run: |
