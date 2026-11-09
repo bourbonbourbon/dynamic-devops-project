@@ -28,6 +28,8 @@ jobs:
           pip install pylint
 
       - name: Analysing the code with pylint
+        env:
+            PYTHONPATH: src
         run: |
           pylint --fail-under=9 src tests
 
