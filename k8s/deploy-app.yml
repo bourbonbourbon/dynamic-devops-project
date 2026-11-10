@@ -7,6 +7,35 @@ metadata:
 spec:
   containers:
     - name: ddp
+      env:
+        - name: PORT
+          value: "8080"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: SENSEBOXES
+          value: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
+        - name: S3_ENDPOINT_URL
+          value: "http://rustfs-service:9000"
+        - name: S3_BUCKET
+          value: "avg-temp"
+        - name: S3_OBJECT
+          value: "avg-temp"
+        - name: S3_REGION
+          value: "us-east-1"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rustfs-credentials
+              key: RUSTFS_ACCESS_KEY
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rustfs-credentials
+              key: RUSTFS_SECRET_KEY
+        - name: VKURL
+          value: "valkey-service"
+        - name: VKPORT
+          value: "6379"
       image: ghcr.io/bourbonbourbon/ddp:0.2.1
       resources:
         requests:
