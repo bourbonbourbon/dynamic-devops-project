@@ -4,7 +4,7 @@
 - [ ] Find the current stable RustFS image tag on Docker Hub and in the RustFS documentation. Write the exact tag down.
 - [x] Replace `minio==7.2.15` in `requirements.txt` with a pinned `boto3` version.
 - [x] Create `requirements-dev.txt` with the test packages.
-- [x] Create `.env.example` with placeholder values.
+- [ ] Create `.env.example` with placeholder values.
 - [x] Add `.env` and `rustfs-data/` to `.gitignore`.
 - [x] Run `git rm --cached .env` so Git stops tracking the file.
 - [ ] Change the MinIO password `CHANGEME123` on every system where it was used.

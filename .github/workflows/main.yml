@@ -128,7 +128,7 @@ jobs:
       - name: Run Docker image
         run: |
           docker run -d -p 8080:8080 --name ddp \
-            --env-file .env.example \
+            --env-file .env \
             ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
 
       - name: Version check
