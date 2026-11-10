@@ -1,18 +1,25 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
-# import datetime
-import io
-import json
 import ast
+import json
+import logging
+import os
 from http import HTTPStatus
 from pathlib import Path
-import minio
+from threading import Thread
+
+import boto3
 import valkey
-from prometheus_client import Counter, generate_latest
+from botocore.client import Config
+from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import dotenv_values
 from flask import Flask, jsonify
-from version import __version__
+from prometheus_client import Counter, generate_latest
+
 from services.opensensemap import OpenSenseMap
+from version import __version__
+
+logger = logging.getLogger(__name__)
 
 total_version_requests = Counter(
     name="version_requests", documentation="Total Number of version requests"
@@ -24,33 +31,55 @@ total_store_requests = Counter(
     name="store_requests", documentation="Total Number of store requests"
 )
 
-
 BASE_URL = "https://api.opensensemap.org"
 
-config = dotenv_values(
-    dotenv_path=Path(__file__).resolve().parent.parent / ".env"
-)
+# Environment variables take precedence over the .env file.
+# Kubernetes and CI pass their values as environment variables.
+config = {
+    **dotenv_values(dotenv_path=Path(__file__).resolve().parent.parent / ".env"),
+    **os.environ,
+}
 
 senseBoxes = config["SENSEBOXES"].split(sep=",")
 
 app = Flask(import_name=__name__)
 
-bucket_name = config["MBUCKET"]
-object_name = config["MOBJECT"]
-minio_client = minio.Minio(
-    endpoint=config["MURL"],
-    access_key=config["MAK"],
-    secret_key=config["MSK"],
-    secure=False,
+bucket_name = config["S3_BUCKET"]
+object_name = config["S3_OBJECT"]
+
+s3_client = boto3.client(
+    service_name="s3",
+    endpoint_url=config["S3_ENDPOINT_URL"],
+    aws_access_key_id=config["S3_ACCESS_KEY"],
+    aws_secret_access_key=config["S3_SECRET_KEY"],
+    region_name=config.get("S3_REGION", "us-east-1"),
+    config=Config(
+        s3={"addressing_style": "path"},
+        connect_timeout=5,
+        read_timeout=10,
+        retries={"max_attempts": 3},
+    ),
 )
 
-BUCKET_FOUND = minio_client.bucket_exists(bucket_name=bucket_name)
-if not BUCKET_FOUND:
-    minio_client.make_bucket(bucket_name=bucket_name)
-
-valkey_client = valkey.Valkey(host=config["VKURL"], port=config["VKPORT"], db=0)
+valkey_client = valkey.Valkey(host=config["VKURL"], port=int(config["VKPORT"]), db=0)
 
 SENSEBOX_FAIL_COUNT = 0
+
+
+def ensure_bucket():
+    try:
+        s3_client.head_bucket(Bucket=bucket_name)
+    except ClientError:
+        s3_client.create_bucket(Bucket=bucket_name)
+
+
+def _try_ensure_bucket():
+    # Runs in a background thread, so the web server starts
+    # even when RustFS is not reachable yet.
+    try:
+        ensure_bucket()
+    except (BotoCoreError, ClientError) as err:
+        logger.warning("Object storage is not ready: %s", err)
 
 
 @app.route(rule="/metrics")
@@ -67,19 +96,22 @@ def print_version():
 def query_main_and_store():
     api = OpenSenseMap(base_url=BASE_URL)
     data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
-    global SENSEBOX_FAIL_COUNT
+    global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
     SENSEBOX_FAIL_COUNT = fail_count
 
-    data_as_bytes = str(object=data).encode(encoding="UTF-8")
-    data_to_minio_stream = io.BytesIO(initial_bytes=data_as_bytes)
-    minio_client.put_object(
-        bucket_name=bucket_name,
-        object_name=object_name,
-        data=data_to_minio_stream,
-        length=len(data_as_bytes),
-    )
+    data_as_text = str(object=data)
+    try:
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=object_name,
+            Body=data_as_text.encode(encoding="UTF-8"),
+            ContentType="text/plain; charset=utf-8",
+        )
+    except (BotoCoreError, ClientError) as err:
+        # Caching continues even when storage fails.
+        logger.error("Could not write to object storage: %s", err)
 
-    valkey_client.set(name="avg-temp", value=str(object=data), ex=3000)
+    valkey_client.set(name="avg-temp", value=data_as_text, ex=3000)
     return jsonify(data), return_code
 
 
@@ -118,15 +150,9 @@ def readyz():
     return str(SENSEBOX_FAIL_COUNT), HTTPStatus.INTERNAL_SERVER_ERROR
 
 
-# Hacky way to populate cache, s3 and senseBox_fail_count
-# messes with unittests
-# @app.before_request
-# def first_temp_query():
-#     app.before_request_funcs[None].remove(first_temp_query)
-#     temperature()
-
-
 if __name__ == "__main__":
     from waitress import serve
 
-    serve(app=app, host=config["HOST"], port=config["PORT"])
+    logging.basicConfig(level=logging.INFO)
+    Thread(target=_try_ensure_bucket, daemon=True).start()
+    serve(app=app, host=config["HOST"], port=int(config["PORT"]))
