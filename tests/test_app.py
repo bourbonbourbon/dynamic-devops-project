@@ -4,6 +4,7 @@
 import json
 from http import HTTPStatus
 from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from botocore.exceptions import ClientError
@@ -30,16 +31,6 @@ def test_version_success(client):
     response = client.get("/version")
     assert response.status_code == HTTPStatus.OK
     assert response.json == {"version": __version__}
-
-
-@patch("requests.request")
-def test_temperature_success(mock_request, client):
-    with open(file="tests/weather.json", mode="r", encoding="UTF-8") as f:
-        mock_request.return_value.status_code = HTTPStatus.OK
-        mock_request.return_value.json.return_value = json.load(f)
-        response = client.get("/temperature")
-        assert response.status_code == HTTPStatus.OK
-        assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
 
 
 @patch("app.OpenSenseMap")
@@ -79,6 +70,7 @@ def test_ensure_bucket_skips_existing_bucket(mock_s3):
     mock_s3.head_bucket.assert_called_once_with(Bucket=bucket_name)
     mock_s3.create_bucket.assert_not_called()
 
+
 @patch("requests.request")
 def test_box_without_thermometer_is_counted_as_failed(mock_request):
     mock_request.return_value.status_code = HTTPStatus.OK
@@ -91,6 +83,7 @@ def test_box_without_thermometer_is_counted_as_failed(mock_request):
     assert data == {"avg_temp": 0, "status": "Internal Error"}
     assert fail_count == 1
 
+
 def test_temperature_reads_json_cache(client):
     valkey_client.set(
         name="avg-temp",
@@ -102,3 +95,67 @@ def test_temperature_reads_json_cache(client):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json == {"avg_temp": 12.5, "status": "Good"}
+
+
+def fresh_box_payload(value=6.77, age=timedelta(minutes=10)):
+    created = (datetime.now(timezone.utc) - age).isoformat()
+    return {
+        "sensors": [
+            {
+                "icon": "osem-thermometer",
+                "unit": "°C",
+                "lastMeasurement": {"value": str(value), "createdAt": created},
+            }
+        ]
+    }
+
+
+def test_measurement_older_than_one_hour_is_rejected():
+    now = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    data = fresh_box_payload(age=timedelta(minutes=0))
+    data["sensors"][0]["lastMeasurement"]["createdAt"] = "2026-01-01T10:30:00.000Z"
+
+    api = OpenSenseMap(base_url="https://example.test")
+
+    result = api._process_temperature_data(data, now=now) # pylint: disable=protected-access
+    assert result is None
+
+
+def test_measurement_within_one_hour_is_accepted():
+    now = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    data = fresh_box_payload(value=20.5, age=timedelta(minutes=0))
+    data["sensors"][0]["lastMeasurement"]["createdAt"] = "2026-01-01T11:30:00.000Z"
+
+    api = OpenSenseMap(base_url="https://example.test")
+
+    result = api._process_temperature_data(data, now=now)  # pylint: disable=protected-access
+    assert result == 20.5
+
+
+@patch("app.s3_client")
+@patch("requests.request")
+def test_temperature_success(mock_request, mock_s3, client):
+    mock_request.return_value.status_code = HTTPStatus.OK
+    mock_request.return_value.json.return_value = fresh_box_payload(value=6.77)
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_internal_error_is_not_cached(mock_api_class, mock_s3, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 0, "status": "Internal Error"},
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        1,
+    )
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert valkey_client.get(name="avg-temp") is None
+    mock_s3.put_object.assert_called_once()

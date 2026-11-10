@@ -70,6 +70,7 @@ def ensure_bucket():
         s3_client.head_bucket(Bucket=bucket_name)
     except ClientError:
         s3_client.create_bucket(Bucket=bucket_name)
+        print("created using bucket", bucket_name)
 
 
 def _try_ensure_bucket():
@@ -109,11 +110,14 @@ def query_main_and_store():
     except (BotoCoreError, ClientError) as err:
         logger.error("Could not write to object storage: %s", err)
 
-    valkey_client.set(name="avg-temp", value=payload, ex=3000)
+    if return_code == HTTPStatus.OK:
+        valkey_client.set(name="avg-temp", value=payload, ex=300)
     return jsonify(data), return_code
+
 
 @app.route(rule="/temperature")
 def temperature():
+    total_temp_requests.inc()
     cached = valkey_client.get(name="avg-temp")
     if cached is not None:
         try:
@@ -127,7 +131,6 @@ def temperature():
                 return jsonify(v_value), HTTPStatus.INTERNAL_SERVER_ERROR
             return jsonify(v_value), HTTPStatus.OK
 
-    total_temp_requests.inc()
     return query_main_and_store()
 
 

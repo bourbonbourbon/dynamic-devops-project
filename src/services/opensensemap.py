@@ -1,10 +1,12 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
-import datetime
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 import requests
+
+MAX_MEASUREMENT_AGE = timedelta(hours=1)
 
 
 class OpenSenseMap:
@@ -53,34 +55,37 @@ class OpenSenseMap:
             self.fail_count,
         )
 
-    def _process_temperature_data(self, data):
-        sensors = data.get("sensors", [])
+    def _process_temperature_data(self, data, now=None):
+        if now is None:
+            now = datetime.now(timezone.utc)
 
-        current_date = datetime.datetime.fromisoformat(
-            datetime.datetime.now()
-            .replace(
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0,
-            )
-            .isoformat()
-            + "Z"
-        )
+        for sensor in data.get("sensors", []):
+            if sensor.get("icon") != "osem-thermometer":
+                continue
+            if sensor.get("unit") != "°C":
+                continue
 
-        for sensor in sensors:
-            if sensor.get("icon") == "osem-thermometer":
-                last_measurement = sensor.get("lastMeasurement", {})
-                if last_measurement and sensor.get("unit") == "°C":
-                    measurement_date = datetime.datetime.fromisoformat(
-                        last_measurement.get("createdAt", "")
-                    )
-                    date_diff_in_hours = (
-                        measurement_date - current_date
-                    ).total_seconds() // 3600
-                    temperature_value = last_measurement.get("value", "")
+            last_measurement = sensor.get("lastMeasurement") or {}
+            value = last_measurement.get("value")
+            created_at = last_measurement.get("createdAt")
+            if value in (None, "") or not created_at:
+                continue
 
-                    if date_diff_in_hours < 24 and temperature_value != "":
-                        return float(temperature_value)
+            measured_at = self._parse_timestamp(created_at)
+            if measured_at is None:
+                continue
+
+            if now - measured_at <= MAX_MEASUREMENT_AGE:
+                return float(value)
 
         return None
+
+    @staticmethod
+    def _parse_timestamp(text):
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
