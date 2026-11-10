@@ -1,93 +1,77 @@
 name: CI
-on: push
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Setup venv
-        run: |
-          python -m venv $PWD/venv
-          export PATH="$PWD/venv:$PATH"
-          pip install -r ./requirements.txt
+          python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pylint
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Analysing the code with pylint
+      - name: Analyse the code with pylint
         env:
-            PYTHONPATH: src
-        run: |
-          pylint --fail-under=9 src tests
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: pylint --fail-under=9 src tests
 
-      - name: Linting Dockerfile
+      - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
 
-
   unittests:
     runs-on: ubuntu-latest
     needs: lint
-    strategy:
-      matrix:
-        python-version: ["3.12"]
+    env:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      SENSEBOXES: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
+      S3_ENDPOINT_URL: "http://localhost:9000"
+      S3_ACCESS_KEY: "ROOTUSER"
+      S3_SECRET_KEY: "unit-test-only"
+      S3_BUCKET: "avg-temp"
+      S3_OBJECT: "avg-temp"
+      S3_REGION: "us-east-1"
+      VKURL: "localhost"
+      VKPORT: "6379"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
-      - name: Setup venv
-        run: |
-          python -m venv $PWD/venv
-          echo $PWD/venv
-          export PATH="$PWD/venv:$PATH"
-          pip install -r ./requirements.txt
-
-      - name: Install pytest
-        run: |
-          pip install pytest
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
 
       - name: Run valkey docker
-        run: |
-          docker run -d -p 6379:6379 --name valkey valkey/valkey:latest
-
-      - name: Run minio docker
-        run: |
-          mkdir -p ${HOME}/minio/data
-          docker run -d -p 9000:9000 --user $(id -u):$(id -g) \
-            --name minio -e "MINIO_ROOT_USER=ROOTUSER" -e "MINIO_ROOT_PASSWORD=CHANGEME123" \
-            -v ${HOME}/minio/data:/data quay.io/minio/minio server /data
+        run: docker run -d -p 6379:6379 --name valkey valkey/valkey:latest
 
       - name: Run pytest
-        run: |
-          pytest
+        run: pytest
 
-      - name: Stop and remove valkey & minio containers
+      - name: Stop and remove valkey
+        if: always()
         run: |
-          docker stop valkey minio
-          docker rm valkey minio
+          docker stop valkey
+          docker rm valkey
 
   build:
-    # https://docs.docker.com/build/ci/github-actions/share-image-jobs/
-    # https://github.com/nektos/act/issues/329#issuecomment-1187246629
     runs-on: ubuntu-latest
     needs: unittests
     permissions:
@@ -121,10 +105,10 @@ jobs:
           target: prod
 
   version-check:
-    # https://docs.docker.com/build/ci/github-actions/share-image-jobs/
-    # https://github.com/nektos/act/issues/329#issuecomment-1187246629
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      packages: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -134,23 +118,35 @@ jobs:
           ver=$(grep -oP '"[\S]*"' src/version.py | cut -d'"' -f2)
           echo "Version=$ver" >> "$GITHUB_ENV"
 
-      - name: Run Docker Image
-        run: |
-          docker run -d -p 8080:8080 --name ddp ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Version Check
+      - name: Run Docker image
         run: |
-          sleep 2
+          docker run -d -p 8080:8080 --name ddp \
+            --env-file .env.example \
+            ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
+
+      - name: Version check
+        run: |
+          sleep 3
           expected=$(grep -i version src/version.py | cut -d "=" -f 2 | tr -d ' "')
           actual=$(curl -s http://localhost:8080/version | jq -r ".version")
+          echo "Expected: $expected, actual: $actual"
           if [ "$actual" = "$expected" ]; then
             echo "Version Check Successful"
           else
             echo "Version Check Failed"
+            docker logs ddp
             exit 1
           fi
 
-      - name: Stop and Remove Docker Container
+      - name: Stop and remove Docker container
+        if: always()
         run: |
           docker stop ddp
           docker rm ddp
