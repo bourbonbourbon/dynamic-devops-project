@@ -1,6 +1,5 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
-import ast
 import json
 import logging
 import os
@@ -99,34 +98,34 @@ def query_main_and_store():
     global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
     SENSEBOX_FAIL_COUNT = fail_count
 
-    data_as_text = str(object=data)
+    payload = json.dumps(obj=data)
     try:
         s3_client.put_object(
             Bucket=bucket_name,
             Key=object_name,
-            Body=data_as_text.encode(encoding="UTF-8"),
-            ContentType="text/plain; charset=utf-8",
+            Body=payload.encode(encoding="UTF-8"),
+            ContentType="application/json",
         )
     except (BotoCoreError, ClientError) as err:
-        # Caching continues even when storage fails.
         logger.error("Could not write to object storage: %s", err)
 
-    valkey_client.set(name="avg-temp", value=data_as_text, ex=3000)
+    valkey_client.set(name="avg-temp", value=payload, ex=3000)
     return jsonify(data), return_code
-
 
 @app.route(rule="/temperature")
 def temperature():
-    v_value = valkey_client.get(name="avg-temp")
-    if v_value is not None:
-        v_value = json.loads(
-            s=json.dumps(
-                obj=ast.literal_eval(node_or_string=v_value.decode(encoding="UTF-8"))
-            )
-        )
-        if v_value.get("status") == "Internal Error":
-            return jsonify(v_value), HTTPStatus.INTERNAL_SERVER_ERROR
-        return jsonify(v_value), HTTPStatus.OK
+    cached = valkey_client.get(name="avg-temp")
+    if cached is not None:
+        try:
+            v_value = json.loads(s=cached.decode(encoding="UTF-8"))
+        except json.JSONDecodeError:
+            # Old cache entries use the Python text format. Treat them as a miss.
+            v_value = None
+
+        if v_value is not None:
+            if v_value.get("status") == "Internal Error":
+                return jsonify(v_value), HTTPStatus.INTERNAL_SERVER_ERROR
+            return jsonify(v_value), HTTPStatus.OK
 
     total_temp_requests.inc()
     return query_main_and_store()

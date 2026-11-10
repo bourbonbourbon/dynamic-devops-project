@@ -20,16 +20,15 @@ class OpenSenseMap:
             try:
                 response = requests.request(method="GET", url=url, timeout=60)
             except Exception:
-                return (
-                    ({"avg_temp": 0, "status": "Internal Error"}),
-                    HTTPStatus.INTERNAL_SERVER_ERROR,
-                    self.fail_count,
-                )
+                self.fail_count += 1
+                continue
 
             if response.status_code == HTTPStatus.OK:
-                temperature_info.append(
-                    self._process_temperature_data(data=response.json())
-                )
+                temperature = self._process_temperature_data(data=response.json())
+                if temperature is not None:
+                    temperature_info.append(temperature)
+                else:
+                    self.fail_count += 1
             else:
                 self.fail_count += 1
 
