@@ -35,21 +35,21 @@
 
 ## C. Fix the code bugs
 
-- [ ] Remove the storage connection from import time. Use the `ensure_bucket()` function at startup.
-- [ ] Read configuration from `os.environ` first, then from `.env`.
-- [ ] Skip `None` values in `_process_temperature_data` and count them as failed senseBoxes.
-- [ ] Stop the early `return` in `get_avg_temperature` when a request raises an exception. Count the failure and continue.
-- [ ] Do not cache `"Internal Error"` results.
-- [ ] Move `total_temp_requests.inc()` so it counts cache hits as well as misses.
-- [ ] Replace `ast.literal_eval` with `json.dumps` and `json.loads` for cached values.
+- [x] Remove the storage connection from import time. Use the `ensure_bucket()` function at startup.
+- [x] Read configuration from `os.environ` first, then from `.env`.
+- [x] Skip `None` values in `_process_temperature_data` and count them as failed senseBoxes.
+- [x] Stop the early `return` in `get_avg_temperature` when a request raises an exception. Count the failure and continue.
+- [x] Do not cache `"Internal Error"` results.
+- [x] Move `total_temp_requests.inc()` so it counts cache hits as well as misses.
+- [x] Replace `ast.literal_eval` with `json.dumps` and `json.loads` for cached values.
 - [ ] Return a clear HTTP status (for example, 503) when Valkey or RustFS is unavailable. Do not return an unhandled exception.
-- [ ] Make the version check in CI fail with `exit 1` when the versions differ.
-- [ ] Remove the commented-out code in `src/app.py`.
+- [x] Make the version check in CI fail with `exit 1` when the versions differ.
+- [x] Remove the commented-out code in `src/app.py`.
 
 ## D. Meet the specification
 
-- [ ] Change the freshness window in `services/opensensemap.py` to one hour. Compare timestamps in UTC with timezone-aware datetime values.
-- [ ] Use a 5-minute cache cycle. Change `ex=3000` to `ex=300` or a value linked to the cycle.
+- [x] Change the freshness window in `services/opensensemap.py` to one hour. Compare timestamps in UTC with timezone-aware datetime values.
+- [x] Use a 5-minute cache cycle. Change `ex=3000` to `ex=300` or a value linked to the cycle.
 - [ ] Start a background scheduler in the app that stores the data every 5 minutes. Do not use cron.
 - [x] Delete the `crontab` file.
 - [ ] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
@@ -66,16 +66,16 @@
 
 ## E. Tests
 
-- [ ] Remove `tests/weather.json`. Build the test data in code instead.
+- [x] Remove `tests/weather.json`. Build the test data in code instead.
 - [ ] Control the current time in tests with `freezegun` or a similar library.
-- [ ] Test `/version`.
+- [x] Test `/version`.
 - [ ] Test `/temperature` with a cache miss.
-- [ ] Test `/temperature` with a cache hit.
+- [x] Test `/temperature` with a cache hit.
 - [ ] Test `/temperature` with stale data.
 - [ ] Test `/temperature` when all senseBoxes fail.
 - [ ] Test `/temperature` when some senseBoxes fail.
 - [ ] Test the status value for each threshold range.
-- [ ] Test `/store`.
+- [x] Test `/store`.
 - [ ] Test `/cache`.
 - [ ] Test `/readyz` in a healthy state and in each unhealthy state.
 - [ ] Test `/metrics`.
@@ -105,7 +105,7 @@
 ## G. Code quality and developer setup
 
 - [ ] Run `black` on all Python files (`todo.txt` item 18).
-- [ ] Add a `.pylintrc` file if you need custom settings.
+- [x] Add a `.pylintrc` file if you need custom settings.
 - [ ] Add the `.vscode/extensions.json` file with the recommended extensions (`todo.txt` item 19).
 - [ ] Add a pre-commit configuration for black, pylint, and Hadolint (`todo.txt` item 17).
 - [ ] Write the output of pylint and pytest as XML files and upload them as CI artifacts (`todo.txt` item 8).
@@ -116,16 +116,16 @@
 
 ## H. GitHub Actions CI
 
-
-- [ ] Add `permissions: contents: read` at the top of the workflow. Grant write permissions only to the jobs that need them.
+- [ ] Add RustFS in CI
+- [x] Add `permissions: contents: read` at the top of the workflow. Grant write permissions only to the jobs that need them.
 - [ ] Add a `pull_request` trigger so that CI runs before merge.
-- [ ] Update `actions/setup-python` from `v3` to a current version.
+- [x] Update `actions/setup-python` from `v3` to a current version.
 - [ ] Pin every action to a full commit SHA. The Scorecard check "Pinned-Dependencies" requires this.
-- [ ] Remove the duplicate venv setup from the lint job, or use the venv for all commands.
+- [x] Remove the duplicate venv setup from the lint job, or use the venv for all commands.
 - [ ] Remove the hardcoded MinIO or RustFS password from the workflow file.
 - [ ] Add the integration test job (checklist item 4.4).
 - [ ] Add SonarQube with the Quality Gate check, or Semgrep (checklist item 4.4). For SonarQube, you must set up a server or use SonarCloud (**decide**).
-- [ ] Add a step that checks the Dockerfile with Hadolint.
+- [x] Add a step that checks the Dockerfile with Hadolint.
 - [ ] Keep Terrascan and check that it passes.
 - [ ] Add Trivy scanning to the build job.
 - [ ] Make the build job run only on `main` or on version tags.
@@ -142,7 +142,7 @@
 - [ ] Create a KIND configuration file with ingress-nginx support (checklist item 4.3). Confirm that the file is committed.
 - [ ] Create a local KIND cluster and install ingress-nginx.
 - [ ] Replace the `Pod` in `k8s/deploy-app.yml` with a `Deployment`.
-- [ ] Update the image tag from `0.2.1` to the current version.
+- [x] Update the image tag from `0.2.1` to the current version.
 - [ ] Add `readinessProbe` for `/readyz`.
 - [ ] Add `livenessProbe` for `/version`.
 - [ ] Add environment variables for the endpoint, bucket, and object names.
@@ -205,7 +205,7 @@
 ## N. Continuous delivery
 
 - [ ] Create a CD workflow (checklist items 4.5 and 5.6, and `todo.txt` item 21).
-- [x] Set the CD workflow to push a versioned image to GHCR. The workflow must run only on version tags.
+- [ ] Set the CD workflow to push a versioned image to GHCR. The workflow must run only on version tags.
 - [ ] Create GitHub environments for dev, stage, and prod, if you use them.
 - [ ] Add environment protection rules and required reviewers for production.
 - [ ] Write the deploy step. It can use `kubectl`, Helm, or Argo CD (see section O).

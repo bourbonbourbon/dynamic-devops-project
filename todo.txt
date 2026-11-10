@@ -28,3 +28,6 @@ don't push directly to main
 auto upgrade dependencies and versions
 isort
 what did i use for requirements.txt?
+add dependabot
+rustfs no gui/web app
+alt for chmod 777 $HOME/rustfs-data/
