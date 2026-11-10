@@ -125,10 +125,10 @@ Here's the HiveBox project plan as a checklist:
 *5.2 Code*
 - [ ] Implement the code requirements
 - [ ] Add a caching layer using Valkey, with a 5-minute caching cycle that refreshes the cache with the latest data each cycle
-- [ ] Add a storage layer using MinIO, with a 5-minute storage cycle that stores another copy of the data each cycle
+- [ ] Add a storage layer using RustFS, with a 5-minute storage cycle that stores another copy of the data each cycle
 - [ ] `/temperature` endpoint: read from cache unless stale, in which case refresh the cache first
 - [ ] `/cache` endpoint: no parameters, updates cached data directly on Valkey (outside of the cycle)
-- [ ] `/store` endpoint: no parameters, stores a new copy of the data directly on MinIO (outside of the cycle)
+- [ ] `/store` endpoint: no parameters, stores a new copy of the data directly on RustFS (outside of the cycle)
 - [ ] `/metrics` endpoint: extend Prometheus metrics with custom metrics based on code logic
 - [ ] `/readyz` endpoint: returns HTTP 200 unless:
   - [ ] 50% + 1 of the configured senseBoxes are not accessible

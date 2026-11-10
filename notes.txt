@@ -6,17 +6,11 @@ https://iximiuz.com/en/posts/kubernetes-kind-load-docker-image/
    kubectl wait --namespace ingress-nginx   --for=condition=ready pod   --selector=app.kubernetes.io/component=controller   --timeout=90s
    kubectl apply -f k8s/deploy-app.yml
 
-   mkdir -p ${HOME}/minio/data
+mkdir $HOME/rustfs-data
 
-docker run \
-   -p 9000:9000 \
-   -p 9001:9001 \
-   --user $(id -u):$(id -g) \
-   --name minio1 \
-   -e "MINIO_ROOT_USER=ROOTUSER" \
-   -e "MINIO_ROOT_PASSWORD=CHANGEME123" \
-   -v ${HOME}/minio/data:/data \
-   quay.io/minio/minio server /data --console-address ":9001"
+chmod 777 $HOME/rustfs-data/
+
+docker run -d --name rustfs -p 9000:9000 -p 9001:9001   -e RUSTFS_ACCESS_KEY=ROOTUSER -e RUSTFS_SECRET_KEY=CHANGEME123   -v "$HOME/rustfs-data:/data" rustfs/rustfs:latest
 
 docker run -p 6379:6379 -it valkey/valkey:latest
 

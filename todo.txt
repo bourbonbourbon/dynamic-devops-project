@@ -25,4 +25,6 @@ By default, the application will store the data every 5 minutes don't use cron
 implement code 5.2 metrics and other things after that
 use digests wherever applicable
 don't push directly to main
-need to remove minio
+auto upgrade dependencies and versions
+isort
+what did i use for requirements.txt?

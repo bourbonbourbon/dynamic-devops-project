@@ -1,20 +1,20 @@
 ## A. Remove all MinIO references
 
-- [ ] Run `grep -rni "minio" . --exclude-dir=.git` and fix every match.
+- [x] Run `grep -rni "minio" . --exclude-dir=.git` and fix every match.
 - [ ] Find the current stable RustFS image tag on Docker Hub and in the RustFS documentation. Write the exact tag down.
-- [ ] Replace `minio==7.2.15` in `requirements.txt` with a pinned `boto3` version.
-- [ ] Create `requirements-dev.txt` with the test packages.
-- [ ] Create `.env.example` with placeholder values.
-- [ ] Add `.env` and `rustfs-data/` to `.gitignore`.
-- [ ] Run `git rm --cached .env` so Git stops tracking the file.
+- [x] Replace `minio==7.2.15` in `requirements.txt` with a pinned `boto3` version.
+- [x] Create `requirements-dev.txt` with the test packages.
+- [x] Create `.env.example` with placeholder values.
+- [x] Add `.env` and `rustfs-data/` to `.gitignore`.
+- [x] Run `git rm --cached .env` so Git stops tracking the file.
 - [ ] Change the MinIO password `CHANGEME123` on every system where it was used.
 - [ ] Remove the committed `.env` from Git history (for example, with `git filter-repo`). This step is optional, but the old password stays in history until you do it.
-- [ ] Rewrite the storage code in `src/app.py` to use `boto3`.
-- [ ] Change the CI unit test job to start RustFS instead of MinIO.
-- [ ] Store the RustFS secret key in GitHub Actions secrets.
-- [ ] Add the RustFS Kubernetes manifests (Secret, PersistentVolumeClaim, Deployment, Service).
-- [ ] Change the README and `todo.txt` text from MinIO to RustFS.
-- [ ] Change section 5.2 of the README checklist to say RustFS.
+- [x] Rewrite the storage code in `src/app.py` to use `boto3`.
+- [x] Change the CI unit test job to start RustFS instead of MinIO.
+- [x] Store the RustFS secret key in GitHub Actions secrets.
+- [x] Add the RustFS Kubernetes manifests (Secret, PersistentVolumeClaim, Deployment, Service).
+- [x] Change the README and `todo.txt` text from MinIO to RustFS.
+- [x] Change section 5.2 of the README checklist to say RustFS.
 
 ## B. Move the code into `src/`
 
