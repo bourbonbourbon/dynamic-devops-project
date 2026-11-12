@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from botocore.exceptions import ClientError
 from prometheus_client import REGISTRY
+from valkey.exceptions import ValkeyError
 
 from app import (
     app,
@@ -300,6 +301,7 @@ def test_box_without_reading_is_logged_by_id(mock_request, caplog):
 
     assert "senseBox box-xyz failed: no usable temperature reading" in caplog.text
 
+
 @pytest.mark.parametrize(
     "value, expected_status",
     [
@@ -320,3 +322,22 @@ def test_status_thresholds(mock_request, value, expected_status):
 
     assert status == HTTPStatus.OK
     assert data["status"] == expected_status
+
+
+@patch("app.valkey_client")
+def test_temperature_returns_503_when_cache_is_down(mock_valkey, client):
+    mock_valkey.get.side_effect = ValkeyError("cache down")
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json == {"error": "cache unavailable"}
+
+
+@patch("app.valkey_client")
+def test_readyz_returns_503_when_cache_is_down(mock_valkey, client):
+    mock_valkey.get.side_effect = ValkeyError("cache down")
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE

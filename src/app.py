@@ -15,6 +15,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import dotenv_values
 from flask import Flask, jsonify
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
+from valkey.exceptions import ValkeyError
 
 from services.opensensemap import OpenSenseMap
 from version import __version__
@@ -83,6 +84,12 @@ CYCLE_SECONDS = 300  # Refresh interval and cache lifetime
 
 class StorageWriteError(Exception):
     """Raised when a required write to object storage fails."""
+
+
+@app.errorhandler(ValkeyError)
+def cache_unavailable(err):
+    logger.error("Cache unavailable: %s", err)
+    return jsonify({"error": "cache unavailable"}), HTTPStatus.SERVICE_UNAVAILABLE
 
 
 def ensure_bucket():
