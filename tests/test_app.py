@@ -299,3 +299,24 @@ def test_box_without_reading_is_logged_by_id(mock_request, caplog):
         api.get_avg_temperature(sense_boxes=["box-xyz"])
 
     assert "senseBox box-xyz failed: no usable temperature reading" in caplog.text
+
+@pytest.mark.parametrize(
+    "value, expected_status",
+    [
+        (10.0, "Too Cold"),
+        (10.004, "Too Cold"),
+        (10.006, "Good"),
+        (36.0, "Good"),
+        (36.01, "Too Hot"),
+    ],
+)
+@patch("requests.request")
+def test_status_thresholds(mock_request, value, expected_status):
+    mock_request.return_value.status_code = HTTPStatus.OK
+    mock_request.return_value.json.return_value = fresh_box_payload(value=value)
+
+    api = OpenSenseMap(base_url="https://example.test")
+    data, status, _ = api.get_avg_temperature(sense_boxes=["box1"])
+
+    assert status == HTTPStatus.OK
+    assert data["status"] == expected_status

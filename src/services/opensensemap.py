@@ -51,16 +51,15 @@ class OpenSenseMap:
             temperature_info.append(temperature)
 
         if temperature_info:
-            avg_temp = sum(temperature_info) / len(temperature_info)
-            status = ""
+            avg_temp = round(sum(temperature_info) / len(temperature_info), 2)
             if avg_temp <= 10:
                 status = "Too Cold"
-            elif 10 < avg_temp <= 36:
+            elif avg_temp <= 36:
                 status = "Good"
             else:
                 status = "Too Hot"
             return (
-                ({"avg_temp": round(number=avg_temp, ndigits=2), "status": status}),
+                {"avg_temp": avg_temp, "status": status},
                 HTTPStatus.OK,
                 self.fail_count,
             )

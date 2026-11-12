@@ -60,7 +60,7 @@
   - [ ] Half of the senseBoxes, plus one, are reachable.
   - [ ] Cached data is no older than two cycles.
   - [ ] Stored data is no older than two cycles.
-- [ ] Confirm the status thresholds (**decide**). The current rules leave gaps between 10 and 11 and between 36 and 37.
+- [x] Confirm the status thresholds (**decide**). The current rules leave gaps between 10 and 11 and between 36 and 37.
 - [ ] Confirm that `/version`, `/temperature`, and `/metrics` return the values the spec requires.
 - [ ] Use Conventional Commits for all new commits. Add a commit message check in CI if you want enforcement.
 
@@ -74,7 +74,7 @@
 - [ ] Test `/temperature` with stale data.
 - [ ] Test `/temperature` when all senseBoxes fail.
 - [ ] Test `/temperature` when some senseBoxes fail.
-- [ ] Test the status value for each threshold range.
+- [x] Test the status value for each threshold range.
 - [x] Test `/store`.
 - [ ] Test `/cache`.
 - [ ] Test `/readyz` in a healthy state and in each unhealthy state.
