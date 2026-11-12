@@ -2,15 +2,23 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=redefined-outer-name
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from unittest.mock import patch
 
 import pytest
 from botocore.exceptions import ClientError
+from prometheus_client import REGISTRY
 
-from app import (app, bucket_name, ensure_bucket, object_name, refresh_cache,
-                 valkey_client)
+from app import (
+    app,
+    bucket_name,
+    ensure_bucket,
+    object_name,
+    refresh_cache,
+    valkey_client,
+)
 from services.opensensemap import OpenSenseMap
 from version import __version__
 
@@ -118,7 +126,9 @@ def test_measurement_older_than_one_hour_is_rejected():
 
     api = OpenSenseMap(base_url="https://example.test")
 
-    result = api._process_temperature_data(data, now=now) # pylint: disable=protected-access
+    result = api._process_temperature_data(
+        data, now=now
+    )  # pylint: disable=protected-access
     assert result is None
 
 
@@ -129,7 +139,9 @@ def test_measurement_within_one_hour_is_accepted():
 
     api = OpenSenseMap(base_url="https://example.test")
 
-    result = api._process_temperature_data(data, now=now)  # pylint: disable=protected-access
+    result = api._process_temperature_data(
+        data, now=now
+    )  # pylint: disable=protected-access
     assert result == 20.5
 
 
@@ -160,6 +172,7 @@ def test_internal_error_is_not_cached(mock_api_class, mock_s3, client):
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert valkey_client.get(name="avg-temp") is None
     mock_s3.put_object.assert_called_once()
+
 
 @patch("app.OpenSenseMap")
 @patch("app.s3_client")
@@ -195,3 +208,70 @@ def test_refresh_cache_runs_without_request_context(mock_s3, mock_api_class):
     assert data == {"avg_temp": 6.77, "status": "Too Cold"}
     assert valkey_client.get(name="avg-temp") is not None
     mock_s3.put_object.assert_called_once()
+
+
+def metric_value(name):
+    return REGISTRY.get_sample_value(name)
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_successful_refresh_sets_timestamps(mock_api_class, mock_s3):
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 6.77, "status": "Too Cold"},
+        HTTPStatus.OK,
+        0,
+    )
+
+    before = time.time()
+    refresh_cache()
+    after = time.time()
+
+    assert before <= metric_value("cache_last_refresh_timestamp_seconds") <= after
+    assert before <= metric_value("store_last_write_timestamp_seconds") <= after
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_failed_store_does_not_update_store_timestamp(mock_api_class, mock_s3):
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 6.77, "status": "Too Cold"},
+        HTTPStatus.OK,
+        0,
+    )
+    mock_s3.put_object.side_effect = ClientError(
+        {"Error": {"Code": "500", "Message": "down"}}, "PutObject"
+    )
+    before_store = metric_value("store_last_write_timestamp_seconds")
+
+    refresh_cache()
+
+    assert metric_value("store_last_write_timestamp_seconds") == before_store
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_internal_error_does_not_update_cache_timestamp(mock_api_class, mock_s3):
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 0, "status": "Internal Error"},
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        1,
+    )
+    before_cache = metric_value("cache_last_refresh_timestamp_seconds")
+
+    refresh_cache()
+
+    assert metric_value("cache_last_refresh_timestamp_seconds") == before_cache
+    assert metric_value("failed_sensebox_count") == 1
+    mock_s3.put_object.assert_called_once()
+
+
+def test_metrics_endpoint_exports_new_metrics(client):
+    response = client.get("/metrics")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.mimetype == "text/plain"
+    assert b"cache_last_refresh_timestamp_seconds" in response.data
+    assert b"store_last_write_timestamp_seconds" in response.data
+    assert b"failed_sensebox_count" in response.data

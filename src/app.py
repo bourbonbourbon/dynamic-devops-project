@@ -14,7 +14,7 @@ from botocore.client import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import dotenv_values
 from flask import Flask, jsonify
-from prometheus_client import Counter, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 
 from services.opensensemap import OpenSenseMap
 from version import __version__
@@ -29,6 +29,19 @@ total_temp_requests = Counter(
 )
 total_store_requests = Counter(
     name="store_requests", documentation="Total Number of store requests"
+)
+
+last_cache_refresh = Gauge(
+    name="cache_last_refresh_timestamp_seconds",
+    documentation="Unix time of the last successful cache refresh",
+)
+last_store_write = Gauge(
+    name="store_last_write_timestamp_seconds",
+    documentation="Unix time of the last successful write to object storage",
+)
+failed_sensebox_count = Gauge(
+    name="failed_sensebox_count",
+    documentation="Number of senseBoxes that failed in the last refresh",
 )
 
 BASE_URL = "https://api.opensensemap.org"
@@ -91,7 +104,11 @@ def _try_ensure_bucket():
 
 @app.route(rule="/metrics")
 def metrics():
-    return generate_latest()
+    return (
+        generate_latest(),
+        HTTPStatus.OK,
+        {"Content-Type": CONTENT_TYPE_LATEST},
+    )
 
 
 @app.route(rule="/version")
@@ -110,6 +127,7 @@ def refresh_cache(require_storage=False):
     data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
     global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
     SENSEBOX_FAIL_COUNT = fail_count
+    failed_sensebox_count.set(fail_count)
 
     payload = json.dumps(obj=data)
     try:
@@ -119,6 +137,7 @@ def refresh_cache(require_storage=False):
             Body=payload.encode(encoding="UTF-8"),
             ContentType="application/json",
         )
+        last_store_write.set(time.time())
     except (BotoCoreError, ClientError) as err:
         if require_storage:
             raise StorageWriteError(str(err)) from err
@@ -126,6 +145,7 @@ def refresh_cache(require_storage=False):
 
     if return_code == HTTPStatus.OK:
         valkey_client.set(name="avg-temp", value=payload, ex=CYCLE_SECONDS)
+        last_cache_refresh.set(time.time())
     return data, return_code
 
 

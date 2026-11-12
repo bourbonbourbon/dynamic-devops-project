@@ -55,7 +55,7 @@
 - [x] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
 - [x] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
 - [x] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
-- [ ] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
+- [x] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
 - [ ] Change `/readyz` to check these conditions:
   - [ ] Half of the senseBoxes, plus one, are reachable.
   - [ ] Cached data is no older than two cycles.
