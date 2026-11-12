@@ -6,13 +6,14 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
 from prometheus_client import REGISTRY
 from valkey.exceptions import ValkeyError
 
+import app as app_module
 from app import (
     app,
     bucket_name,
@@ -336,8 +337,76 @@ def test_temperature_returns_503_when_cache_is_down(mock_valkey, client):
 
 @patch("app.valkey_client")
 def test_readyz_returns_503_when_cache_is_down(mock_valkey, client):
-    mock_valkey.get.side_effect = ValkeyError("cache down")
+    mock_valkey.ping.side_effect = ValkeyError("cache down")
 
     response = client.get("/readyz")
 
     assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json == {"error": "cache unavailable"}
+
+
+@pytest.fixture
+def ready_app(monkeypatch):
+    """Set the app to a healthy state with a mocked Valkey client."""
+    now = time.time()
+    monkeypatch.setattr(app_module, "valkey_client", MagicMock())
+    monkeypatch.setattr(app_module, "LAST_CACHE_REFRESH", now)
+    monkeypatch.setattr(app_module, "LAST_STORE_WRITE", now)
+    monkeypatch.setattr(app_module, "SENSEBOX_FAIL_COUNT", 0)
+    return monkeypatch
+
+
+def test_readyz_ready_when_all_checks_pass(client, ready_app):
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json["ready"] is True
+
+
+def test_readyz_ready_at_sensebox_threshold(client, ready_app):
+    total = len(app_module.senseBoxes)
+    ready_app.setattr(app_module, "SENSEBOX_FAIL_COUNT", total - (total // 2 + 1))
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.OK
+
+
+def test_readyz_not_ready_when_too_many_senseboxes_fail(client, ready_app):
+    total = len(app_module.senseBoxes)
+    ready_app.setattr(app_module, "SENSEBOX_FAIL_COUNT", total - (total // 2))
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json["checks"]["senseboxes_reachable"] is False
+
+
+def test_readyz_not_ready_when_cache_is_too_old(client, ready_app):
+    too_old = time.time() - 2 * app_module.CYCLE_SECONDS - 1
+    ready_app.setattr(app_module, "LAST_CACHE_REFRESH", too_old)
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json["checks"]["cache_fresh"] is False
+
+
+def test_readyz_not_ready_when_store_is_too_old(client, ready_app):
+    too_old = time.time() - 2 * app_module.CYCLE_SECONDS - 1
+    ready_app.setattr(app_module, "LAST_STORE_WRITE", too_old)
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json["checks"]["store_fresh"] is False
+
+
+def test_readyz_not_ready_before_first_refresh(client, ready_app):
+    ready_app.setattr(app_module, "LAST_CACHE_REFRESH", 0.0)
+    ready_app.setattr(app_module, "LAST_STORE_WRITE", 0.0)
+
+    response = client.get("/readyz")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json["ready"] is False

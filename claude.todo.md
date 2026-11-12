@@ -42,7 +42,7 @@
 - [x] Do not cache `"Internal Error"` results.
 - [x] Move `total_temp_requests.inc()` so it counts cache hits as well as misses.
 - [x] Replace `ast.literal_eval` with `json.dumps` and `json.loads` for cached values.
-- [ ] Return a clear HTTP status (for example, 503) when Valkey or RustFS is unavailable. Do not return an unhandled exception.
+- [x] Return a clear HTTP status (for example, 503) when Valkey or RustFS is unavailable. Do not return an unhandled exception.
 - [x] Make the version check in CI fail with `exit 1` when the versions differ.
 - [x] Remove the commented-out code in `src/app.py`.
 
@@ -56,10 +56,10 @@
 - [x] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
 - [x] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
 - [x] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
-- [ ] Change `/readyz` to check these conditions:
-  - [ ] Half of the senseBoxes, plus one, are reachable.
-  - [ ] Cached data is no older than two cycles.
-  - [ ] Stored data is no older than two cycles.
+- [x] Change `/readyz` to check these conditions:
+  - [x] Half of the senseBoxes, plus one, are reachable.
+  - [x] Cached data is no older than two cycles.
+  - [x] Stored data is no older than two cycles.
 - [x] Confirm the status thresholds (**decide**). The current rules leave gaps between 10 and 11 and between 36 and 37.
 - [ ] Confirm that `/version`, `/temperature`, and `/metrics` return the values the spec requires.
 - [ ] Use Conventional Commits for all new commits. Add a commit message check in CI if you want enforcement.

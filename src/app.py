@@ -80,6 +80,8 @@ valkey_client = valkey.Valkey(host=config["VKURL"], port=int(config["VKPORT"]), 
 SENSEBOX_FAIL_COUNT = 0
 
 CYCLE_SECONDS = 300  # Refresh interval and cache lifetime
+LAST_CACHE_REFRESH = 0.0  # Unix time of the last successful cache write
+LAST_STORE_WRITE = 0.0  # Unix time of the last successful RustFS write
 
 
 class StorageWriteError(Exception):
@@ -130,9 +132,9 @@ def refresh_cache(require_storage=False):
     This function does not use Flask request objects, so the scheduler
     thread can call it.
     """
+    global SENSEBOX_FAIL_COUNT, LAST_CACHE_REFRESH, LAST_STORE_WRITE  # pylint: disable=global-statement
     api = OpenSenseMap(base_url=BASE_URL)
     data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
-    global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
     SENSEBOX_FAIL_COUNT = fail_count
     failed_sensebox_count.set(fail_count)
 
@@ -144,7 +146,8 @@ def refresh_cache(require_storage=False):
             Body=payload.encode(encoding="UTF-8"),
             ContentType="application/json",
         )
-        last_store_write.set(time.time())
+        LAST_STORE_WRITE = time.time()
+        last_store_write.set(LAST_STORE_WRITE)
     except (BotoCoreError, ClientError) as err:
         if require_storage:
             raise StorageWriteError(str(err)) from err
@@ -152,7 +155,8 @@ def refresh_cache(require_storage=False):
 
     if return_code == HTTPStatus.OK:
         valkey_client.set(name="avg-temp", value=payload, ex=CYCLE_SECONDS)
-        last_cache_refresh.set(time.time())
+        LAST_CACHE_REFRESH = time.time()
+        last_cache_refresh.set(LAST_CACHE_REFRESH)
     return data, return_code
 
 
@@ -208,13 +212,24 @@ def store():
 
 @app.route(rule="/readyz")
 def readyz():
-    most_sense_boxes_working = SENSEBOX_FAIL_COUNT < (len(senseBoxes) // 2) + 1
-    v_value = valkey_client.get(name="avg-temp")
-    v_ttl = valkey_client.ttl(name="avg-temp")
+    valkey_client.ping()  # Raises ValkeyError when the cache is down.
 
-    if most_sense_boxes_working and v_value is not None and v_ttl > 1:
-        return str(SENSEBOX_FAIL_COUNT), HTTPStatus.OK
-    return str(SENSEBOX_FAIL_COUNT), HTTPStatus.INTERNAL_SERVER_ERROR
+    now = time.time()
+    max_age = 2 * CYCLE_SECONDS
+    total = len(senseBoxes)
+    reachable = total - SENSEBOX_FAIL_COUNT
+
+    checks = {
+        "senseboxes_reachable": reachable >= total // 2 + 1,
+        "cache_fresh": LAST_CACHE_REFRESH > 0 and now - LAST_CACHE_REFRESH <= max_age,
+        "store_fresh": LAST_STORE_WRITE > 0 and now - LAST_STORE_WRITE <= max_age,
+    }
+    ready = all(checks.values())
+    status = HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE
+    return (
+        jsonify({"ready": ready, "checks": checks, "reachable_senseboxes": reachable}),
+        status,
+    )
 
 
 if __name__ == "__main__":
