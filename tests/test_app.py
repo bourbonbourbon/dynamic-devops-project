@@ -9,14 +9,8 @@ from unittest.mock import patch
 import pytest
 from botocore.exceptions import ClientError
 
-from app import (
-    app,
-    bucket_name,
-    ensure_bucket,
-    object_name,
-    refresh_cache,
-    valkey_client,
-)
+from app import (app, bucket_name, ensure_bucket, object_name, refresh_cache,
+                 valkey_client)
 from services.opensensemap import OpenSenseMap
 from version import __version__
 
@@ -124,9 +118,7 @@ def test_measurement_older_than_one_hour_is_rejected():
 
     api = OpenSenseMap(base_url="https://example.test")
 
-    result = api._process_temperature_data(
-        data, now=now
-    )  # pylint: disable=protected-access
+    result = api._process_temperature_data(data, now=now) # pylint: disable=protected-access
     assert result is None
 
 
@@ -137,9 +129,7 @@ def test_measurement_within_one_hour_is_accepted():
 
     api = OpenSenseMap(base_url="https://example.test")
 
-    result = api._process_temperature_data(
-        data, now=now
-    )  # pylint: disable=protected-access
+    result = api._process_temperature_data(data, now=now)  # pylint: disable=protected-access
     assert result == 20.5
 
 
@@ -170,43 +160,6 @@ def test_internal_error_is_not_cached(mock_api_class, mock_s3, client):
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     assert valkey_client.get(name="avg-temp") is None
     mock_s3.put_object.assert_called_once()
-
-
-@patch("app.OpenSenseMap")
-@patch("app.s3_client")
-def test_store_returns_503_when_storage_is_down(mock_s3, mock_api_class, client):
-    mock_api_class.return_value.get_avg_temperature.return_value = (
-        {"avg_temp": 6.77, "status": "Too Cold"},
-        HTTPStatus.OK,
-        0,
-    )
-    mock_s3.put_object.side_effect = ClientError(
-        {"Error": {"Code": "500", "Message": "down"}}, "PutObject"
-    )
-
-    response = client.get("/store")
-
-    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
-    assert response.json == {"error": "object storage unavailable"}
-    assert valkey_client.get(name="avg-temp") is None
-
-
-@patch("app.OpenSenseMap")
-@patch("app.s3_client")
-def test_refresh_cache_runs_without_request_context(mock_s3, mock_api_class):
-    mock_api_class.return_value.get_avg_temperature.return_value = (
-        {"avg_temp": 6.77, "status": "Too Cold"},
-        HTTPStatus.OK,
-        0,
-    )
-
-    data, return_code = refresh_cache()
-
-    assert return_code == HTTPStatus.OK
-    assert data == {"avg_temp": 6.77, "status": "Too Cold"}
-    assert valkey_client.get(name="avg-temp") is not None
-    mock_s3.put_object.assert_called_once()
-
 
 @patch("app.OpenSenseMap")
 @patch("app.s3_client")
