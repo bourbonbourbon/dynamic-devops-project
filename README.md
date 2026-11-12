@@ -3,165 +3,307 @@
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/bourbonbourbon/dynamic-devops-project/badge)](https://scorecard.dev/viewer/?uri=github.com/bourbonbourbon/dynamic-devops-project)
 
-### Setup
-1. .env file
+# HiveBox (ddp)
+
+HiveBox is a small Python web service. It is my implementation of the
+[HiveBox project](https://devopsroadmap.io/projects/hivebox/) from DevOps Roadmap.
+
+The service reads temperature data from [openSenseMap](https://opensensemap.org)
+senseBoxes. It calculates the average temperature and gives it a status:
+`Too Cold`, `Good`, or `Too Hot`.
+
+Current version: `0.3.0` (see `src/version.py`).
+
+## How it works
+
+1. A background thread runs every 300 seconds (one cycle).
+2. The thread requests the data of each senseBox from the openSenseMap API.
+3. The service uses only a temperature sensor that:
+   - has the icon `osem-thermometer`
+   - has the unit `°C`
+   - has a measurement that is not older than one hour (compared in UTC)
+4. The service calculates the average and rounds it to two decimals.
+5. The service writes the result as JSON to:
+   - RustFS (S3-compatible object storage), as a stored copy
+   - Valkey, as a cache with a lifetime of 300 seconds
+6. The service does not cache error results.
+
+A senseBox that gives no usable reading counts as a failed senseBox.
+The service writes one warning to the log for each failed senseBox.
+
+### Status rules
+
+| Average temperature | Status |
+|---|---|
+| 10 or lower | `Too Cold` |
+| Above 10, up to and including 36 | `Good` |
+| Above 36 | `Too Hot` |
+
+The service rounds the average first. Then it selects the status.
+
+## Endpoints
+
+| Endpoint | Description | Success | Failure |
+|---|---|---|---|
+| `GET /version` | Returns the application version. | `200` `{"version": "0.3.0"}` | - |
+| `GET /temperature` | Returns the average temperature from the cache. On a cache miss, it fetches new data. | `200` `{"avg_temp": 14.98, "status": "Good"}` | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
+| `GET /store` | Fetches new data and writes it to RustFS and to the cache. | `200` (same body as `/temperature`) | `503` `{"error": "object storage unavailable"}` when the RustFS write fails. |
+| `GET /readyz` | Readiness check. | `200` | `503` when a check fails. |
+| `GET /metrics` | Prometheus metrics. | `200` | - |
+
+### Readiness (`/readyz`)
+
+The endpoint returns `200` only when all these conditions are true:
+
+- At least half of the senseBoxes, plus one, are reachable.
+- The last successful cache write is not older than two cycles (600 seconds).
+- The last successful RustFS write is not older than two cycles (600 seconds).
+
+The response body shows each check. Example:
+
+```json
+{
+  "ready": true,
+  "checks": {
+    "senseboxes_reachable": true,
+    "cache_fresh": true,
+    "store_fresh": true
+  },
+  "reachable_senseboxes": 6
+}
 ```
-PORT="8080"
-HOST="0.0.0.0"
-SENSEBOXES="5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
-MURL="localhost:9000"
-MAK="ROOTUSER"
-MSK="CHANGEME123"
-MBUCKET="avg-temp"
-MOBJECT="avg-temp"
-VKURL="localhost"
-VKPORT="6379"
+
+The endpoint returns `503` before the first successful refresh.
+
+### Metrics (`/metrics`)
+
+The service exports the default Python metrics and these custom metrics:
+
+| Metric | Type | Description |
+|---|---|---|
+| `version_requests_total` | counter | Number of `/version` requests. |
+| `temp_requests_total` | counter | Number of `/temperature` requests (cache hits and misses). |
+| `store_requests_total` | counter | Number of `/store` requests. |
+| `cache_last_refresh_timestamp_seconds` | gauge | Unix time of the last successful cache write. |
+| `store_last_write_timestamp_seconds` | gauge | Unix time of the last successful RustFS write. |
+| `failed_sensebox_count` | gauge | Number of failed senseBoxes in the last refresh. |
+
+Prometheus calculates the age at query time:
+
+- Cache age in seconds: `time() - cache_last_refresh_timestamp_seconds`
+- Store age in seconds: `time() - store_last_write_timestamp_seconds`
+
+## Configuration
+
+The service reads its settings from environment variables.
+If a variable is not set, the service reads it from the `.env` file in the project root.
+
+| Variable | Description | Example |
+|---|---|---|
+| `PORT` | Port of the web server. | `8080` |
+| `HOST` | Address of the web server. | `0.0.0.0` |
+| `SENSEBOXES` | senseBox IDs, separated by commas. | `5eba5fbad46fb8001b799786,5a77184229b729001a150c10` |
+| `S3_ENDPOINT_URL` | URL of the S3-compatible storage (RustFS). | `http://localhost:9000` |
+| `S3_ACCESS_KEY` | Access key of the storage. | `ROOTUSER` |
+| `S3_SECRET_KEY` | Secret key of the storage. | (set your own value) |
+| `S3_BUCKET` | Bucket name. The service creates the bucket if it does not exist. | `avg-temp` |
+| `S3_OBJECT` | Object name in the bucket. | `avg-temp` |
+| `S3_REGION` | Region name for the S3 client. Optional. Default: `us-east-1`. | `us-east-1` |
+| `VKURL` | Host name of Valkey. | `localhost` |
+| `VKPORT` | Port of Valkey. | `6379` |
+
+> **Warning:** The `.env` file is in the repository and the Dockerfile copies it
+> into the image. Use only placeholder values in this file. Do not use real secrets.
+> This will change when the configuration moves to Kubernetes Secrets.
+
+## Requirements
+
+- Python 3.12
+- Docker (for Valkey, RustFS, and the image build)
+- `kubectl` and `kind` (for the Kubernetes steps)
+
+## Run locally
+
+1. Create a virtual environment and install the packages:
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements-dev.txt
+   ```
+
+2. Start Valkey:
+
+   ```bash
+   docker run -d --name valkey -p 6379:6379 valkey/valkey:latest
+   ```
+
+3. Start RustFS. Use a pinned tag from
+   [Docker Hub](https://hub.docker.com/r/rustfs/rustfs) in place of `<rustfs-tag>`:
+
+   ```bash
+   docker run -d --name rustfs -p 9000:9000 -p 9001:9001 \
+     -e RUSTFS_ACCESS_KEY=ROOTUSER \
+     -e RUSTFS_SECRET_KEY=<your-secret> \
+     -v "$(pwd)/rustfs-data:/data" \
+     rustfs/rustfs:<rustfs-tag>
+   ```
+
+   Port `9000` is the S3 API. Port `9001` is the web console.
+   Make sure the values in `.env` match the keys that you set here.
+   Check the RustFS documentation for the variable names of your tag.
+
+4. Start the application:
+
+   ```bash
+   python src/app.py
+   ```
+
+5. Test the endpoints:
+
+   ```bash
+   curl -i http://localhost:8080/version
+   curl -i http://localhost:8080/temperature
+   curl -i http://localhost:8080/readyz
+   curl -s http://localhost:8080/metrics
+   ```
+
+## Test and lint
+
+The unit tests mock RustFS and the openSenseMap API.
+The unit tests use a real Valkey server on `localhost:6379`.
+Start Valkey before you run the tests (see step 2 above).
+
+Run the tests:
+
+```bash
+pytest
 ```
-2. Build the docker file
-3. docker run -p 8080:8080 imagename:tag
 
-# Main Objectives
-Here's the HiveBox project plan as a checklist:
+Run the linter:
 
-**Phase 1: Kickoff**
+```bash
+pylint --fail-under=9 src tests
+```
 
-*1.1 Kickoff*
-- [x] Understand your role in this project and how you work with other teams (assume you are in a team and don't act like you are working alone!)
-- [x] Brush up on your knowledge about Software Project management (Hint: What is agile project management?)
-- [x] Decide which Agile methodology you will use, such as Scrum, Kanban, or Scrumban (Kanban is recommended for this project)
-- [x] Avoid Scope Creep! Make it work, make it right, make it fast!
-- [x] Don't forget! You are managers of one!
+The file `pytest.ini` sets the import path for pytest.
+The file `.pylintrc` sets the import path for pylint.
 
-*1.2 Preparation*
-- [x] Create GitHub account (if you don't have one), then fork HiveBox repository on GitHub and start from there
-- [x] Create GitHub project board for this repository (use Kanban template)
-- [ ] Each phase should be presented as a pull request against the main branch. Don't push directly to the main branch!
-- [ ] Document as you go. Always assume that someone else will read your project at any phase
-- [x] Get 3 senseBox IDs close to each other from the openSenseMap website (you can use 5eba5fbad46fb8001b799786, 5c21ff8f919bf8001adf2488, and 5ade1acf223bd80019a1011c). Just copy the IDs, you will need them in the next steps
+## Docker
 
-**Phase 2: Initial Application**
+Build the image:
 
-*2.1 Tools*
-- [x] Git
-- [x] VS Code
-- [x] Docker
+```bash
+docker build -t ddp:test --target prod .
+```
 
-*2.2 Code*
-- [x] Implement the code requirements in your GitHub repository fork for the project (done in phase 1)
-- [x] Use Semantic Versioning v0.0.1 as the initial version of the HiveBox app
-- [x] Create a function that prints the current app version. It just needs to print the version and then exit
+Run the image:
 
-*2.3 Containers*
-- [x] Create a Dockerfile for the project
-- [x] Build the Docker image and run it locally
+```bash
+docker run -d -p 8080:8080 --name ddp ddp:test
+curl -s http://localhost:8080/version
+```
 
-*2.4 Testing*
-- [x] Locally, run the app container and ensure it returns the correct value
-- [x] Ensure that documentation is provided on how to test the application
+The container runs as the user `nobody`.
+The container must reach Valkey and RustFS at the addresses in `.env`.
+Use a Docker network, or set the variables with `-e`, when you run all
+three containers on one host.
 
-**Phase 3: Endpoints, Tests, and CI**
+CI pushes the image to `ghcr.io/bourbonbourbon/ddp:<version>`.
 
-*3.1 Tools*
-- [x] Hadolint and VS Code hadolint extension
-- [x] Pylint and VS Code Pylint extension
+## Kubernetes
 
-*3.2 Code*
-- [ ] Use Conventional Commits for Git commits
-- [x] Familiarize yourself with openSenseMap API
-- [x] Implement the code requirements (Hint: Flask Quickstart or FastAPI)
-- [x] Write unit tests for all endpoints
-- [x] `/version` endpoint: no parameters, returns the version of the deployed app
-- [x] `/temperature` endpoint: no parameters, returns current average temperature based on all senseBox data, with data no older than 1 hour
+The folder `k8s/` contains these files:
 
-*3.3 Containers*
-- [x] Apply Best Practices for containers (Hint: Docker Best Practices)
+| File | Content |
+|---|---|
+| `kind.yaml` | Configuration of the local KIND cluster. |
+| `deploy-app.yml` | Pod, Service, and Ingress of the application. |
+| `rustfs.yml` | PersistentVolumeClaim, Deployment, and Service of RustFS. |
 
-*3.4 Continuous Integration*
-- [x] Create a GitHub Actions workflow for CI
-- [x] Add a step to lint code and Dockerfile
-- [x] Add a step to build the Docker image
-- [x] Add a step to run unit tests
-- [ ] Set up OpenSSF Scorecard GitHub Action and fix any issues reported by it
+Create the Secret for RustFS first. Do not put the values in a file in Git:
 
-*3.5 Testing*
-- [x] In the CI pipeline, call the `/version` endpoint and ensure it returns the correct value
+```bash
+kubectl create secret generic rustfs-credentials \
+  --from-literal=RUSTFS_ACCESS_KEY=ROOTUSER \
+  --from-literal=RUSTFS_SECRET_KEY='<your-secret>'
+```
 
-**Phase 4: Kubernetes, Metrics, and Integration Tests**
+Then apply the manifests:
 
-*4.1 Tools*
-- [x] Kind
-- [x] Kubectl
+```bash
+kubectl apply -f k8s/rustfs.yml
+kubectl apply -f k8s/deploy-app.yml
+```
 
-*4.2 Code*
-- [x] Implement the code requirements
-- [x] Write integration tests (Hint: 3 ways to test your API with Python)
-- [x] senseBox should be configurable via env vars
-- [x] `/metrics` endpoint: no parameters, returns default Prometheus metrics about the app
-- [x] `/temperature` endpoint: add a "status" field based on the average temperature value
-  - [x] Less than 10: Too Cold
-  - [x] Between 11-36: Good
-  - [x] More than 37: Too Hot
+Before you apply `rustfs.yml`, replace `<rustfs-tag>` with a pinned image tag.
 
-*4.3 Containers*
-- [x] Create a KIND configuration to run with Ingress-Nginx
-- [x] Create Kubernetes core manifests to deploy the application
+The application expects a Valkey service with the name `valkey-service`.
+The repository does not have the Valkey manifests yet.
 
-*4.4 Continuous Integration*
-- [ ] Run code integration tests
-- [ ] Run SonarQube for code quality, security, and static analysis (Hint: Use SonarQube Quality Gate check action, also consider Semgrep)
-- [x] Run Terrascan for Kubernetes manifest misconfigurations and vulnerabilities (Hint: Terrascan GitHub Action)
-- [ ] Apply Best Practices for CI (Hint: Best practices when adopting continuous integration)
+## CI
 
-*4.5 Continuous Delivery*
-- [x] Create a GitHub Actions workflow for CD
-- [x] Release by pushing a versioned Docker image to a container registry (Hint: Use GitHub Container Registry)
+The workflow `.github/workflows/main.yml` runs on each push to `main`.
+It has these jobs in this order:
 
-**Phase 5: Caching, Storage, Helm, and IaC**
+1. `lint`: runs pylint and Hadolint.
+2. `unittests`: starts Valkey and runs pytest.
+3. `build`: builds the image and pushes it to GHCR.
+4. `version-check`: runs the image and compares `/version` with `src/version.py`.
 
-*5.1 Tools*
-- [x] Kind
-- [x] Kubectl
+Two more workflows run security checks:
 
-*5.2 Code*
-- [ ] Implement the code requirements
-- [ ] Add a caching layer using Valkey, with a 5-minute caching cycle that refreshes the cache with the latest data each cycle
-- [ ] Add a storage layer using RustFS, with a 5-minute storage cycle that stores another copy of the data each cycle
-- [ ] `/temperature` endpoint: read from cache unless stale, in which case refresh the cache first
-- [ ] `/cache` endpoint: no parameters, updates cached data directly on Valkey (outside of the cycle)
-- [ ] `/store` endpoint: no parameters, stores a new copy of the data directly on RustFS (outside of the cycle)
-- [ ] `/metrics` endpoint: extend Prometheus metrics with custom metrics based on code logic
-- [ ] `/readyz` endpoint: returns HTTP 200 unless:
-  - [ ] 50% + 1 of the configured senseBoxes are not accessible
-  - [ ] Cached content is older than 2 cycles
-  - [ ] Stored content is older than 2 cycles
+- `scorecard.yml`: OpenSSF Scorecard analysis.
+- `terrascan.yml`: Terrascan scan of the files in `k8s/`.
 
-*5.3 Containers*
-- [ ] Create a Helm chart for the application (Hint: Awesome Helm List)
-- [ ] Create Kustomize manifests for infrastructure resources like KeyVal (Hint: Awesome Kustomize List)
-- [ ] Review Kubernetes Security Best Practices (Hint: Kubernetes Security Best Practices with tips for the CKS exam)
-- [ ] Configure the Kubernetes app manifest to use `/readyz` as a readiness probe
+## Project layout
 
-*5.4 Infrastructure as Code*
-- [ ] Deploy Grafana Agent to collect logs and metrics (Hint: Create Grafana Cloud free account to use Loki and Grafana)
-- [ ] Create a Kubernetes cluster using Terraform IaC (Hint: Use free tier from any cloud provider or use a local emulator such as Floci)
+```
+.
+├── .github/workflows/   CI and security workflows
+├── k8s/                 Kubernetes manifests
+├── src/
+│   ├── app.py           Flask application, scheduler, and endpoints
+│   ├── version.py       Application version
+│   └── services/
+│       └── opensensemap.py   Client for the openSenseMap API
+├── tests/
+│   └── test_app.py      Unit tests
+├── Dockerfile
+├── pytest.ini
+├── requirements.txt
+└── requirements-dev.txt
+```
 
-*5.5 Continuous Integration*
-- [ ] Create End-to-End test (Hint: Venom, a declarative test suite)
-- [ ] Run the KIND cluster, deploy the app and infrastructure, then run the End-to-End test
+## Project status
 
-*5.6 Continuous Delivery*
-- [ ] Apply Best Practices for CD
+Done:
 
-**Phase 6: Free-Style Enhancements**
+- [x] `/version`, `/temperature`, `/store`, `/readyz`, and `/metrics` endpoints
+- [x] Valkey cache and RustFS storage (S3 API with `boto3`)
+- [x] Background scheduler (no cron)
+- [x] Custom Prometheus metrics
+- [x] Unit tests, pylint, and Hadolint in CI
+- [x] Docker image on GHCR
+- [x] OpenSSF Scorecard and Terrascan workflows
 
-*Highly recommended*
-- [ ] Deploy the application in Declarative GitOps style using Argo CD
-- [ ] Prepare for production by setting up DNS (ExternalDNS) and Certificates (Cert-Manager)
-- [ ] Automate dependency updates with Dependabot
-- [ ] Move all external services (like Grafana.com and Terraform Cloud) to the Kubernetes cluster using open-source solutions
+Open:
 
-*Extra suggestions*
-- [ ] Set up Kyverno for Policy as Code
-- [ ] Build multi-environment Kubernetes clusters (Dev, Stage, and Prod) with Terraform and Kustomize
-- [ ] Use TestKube for better testing execution
-- [ ] Develop a Kubernetes Operator to handle the app operations (Hint: Introduction to Kubernetes Operators)
+- [ ] `/cache` endpoint
+- [ ] Integration tests with real Valkey and RustFS
+- [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
+- [ ] Valkey manifests
+- [ ] Helm chart and Kustomize manifests
+- [ ] Remove `.env` from the repository and from the image
+- [ ] Image scanning (Trivy), SonarQube or Semgrep, Dependabot
+- [ ] Build job only on `main` or on version tags
+- [ ] Terraform for the Kubernetes cluster
+- [ ] Grafana for logs and metrics
+- [ ] End-to-end tests with Venom
+- [ ] Continuous delivery with Argo CD, ExternalDNS, and Cert-Manager
+
+## Known limitations
+
+- Each application instance has its own scheduler and its own readiness data.
+- If Valkey is not available, `/temperature` returns `503`. It does not fetch data directly.
+- The service stores error results in RustFS. It does not store them in Valkey.
