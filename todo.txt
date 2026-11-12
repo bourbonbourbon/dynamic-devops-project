@@ -31,3 +31,4 @@ what did i use for requirements.txt?
 add dependabot
 rustfs no gui/web app
 alt for chmod 777 $HOME/rustfs-data/
+in k8s give some time for the app to get ready?
