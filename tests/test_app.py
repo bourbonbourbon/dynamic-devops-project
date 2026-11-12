@@ -2,6 +2,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=redefined-outer-name
 import json
+import logging
 import time
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
@@ -275,3 +276,26 @@ def test_metrics_endpoint_exports_new_metrics(client):
     assert b"cache_last_refresh_timestamp_seconds" in response.data
     assert b"store_last_write_timestamp_seconds" in response.data
     assert b"failed_sensebox_count" in response.data
+
+
+@patch("requests.request")
+def test_failed_senseboxes_are_logged_by_id(mock_request, caplog):
+    mock_request.return_value.status_code = HTTPStatus.NOT_FOUND
+
+    api = OpenSenseMap(base_url="https://example.test")
+    with caplog.at_level(logging.WARNING):
+        api.get_avg_temperature(sense_boxes=["box-abc"])
+
+    assert "senseBox box-abc failed: HTTP status 404" in caplog.text
+
+
+@patch("requests.request")
+def test_box_without_reading_is_logged_by_id(mock_request, caplog):
+    mock_request.return_value.status_code = HTTPStatus.OK
+    mock_request.return_value.json.return_value = {"sensors": []}
+
+    api = OpenSenseMap(base_url="https://example.test")
+    with caplog.at_level(logging.WARNING):
+        api.get_avg_temperature(sense_boxes=["box-xyz"])
+
+    assert "senseBox box-xyz failed: no usable temperature reading" in caplog.text

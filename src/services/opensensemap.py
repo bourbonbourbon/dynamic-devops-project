@@ -1,10 +1,13 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
+import logging
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 MAX_MEASUREMENT_AGE = timedelta(hours=1)
 
@@ -21,18 +24,31 @@ class OpenSenseMap:
             url = f"{self.base_url}/boxes/{sense_box}?format=json"
             try:
                 response = requests.request(method="GET", url=url, timeout=60)
-            except Exception:
+            except requests.RequestException as err:
+                logger.warning("senseBox %s failed: request error: %s", sense_box, err)
                 self.fail_count += 1
                 continue
 
-            if response.status_code == HTTPStatus.OK:
-                temperature = self._process_temperature_data(data=response.json())
-                if temperature is not None:
-                    temperature_info.append(temperature)
-                else:
-                    self.fail_count += 1
-            else:
+            if response.status_code != HTTPStatus.OK:
+                logger.warning(
+                    "senseBox %s failed: HTTP status %s",
+                    sense_box,
+                    response.status_code,
+                )
                 self.fail_count += 1
+                continue
+
+            temperature = self._process_temperature_data(data=response.json())
+            if temperature is None:
+                logger.warning(
+                    "senseBox %s failed: no usable temperature reading "
+                    "(no thermometer, empty value, or data older than one hour)",
+                    sense_box,
+                )
+                self.fail_count += 1
+                continue
+
+            temperature_info.append(temperature)
 
         if temperature_info:
             avg_temp = sum(temperature_info) / len(temperature_info)
