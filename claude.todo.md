@@ -50,11 +50,11 @@
 
 - [x] Change the freshness window in `services/opensensemap.py` to one hour. Compare timestamps in UTC with timezone-aware datetime values.
 - [x] Use a 5-minute cache cycle. Change `ex=3000` to `ex=300` or a value linked to the cycle.
-- [ ] Start a background scheduler in the app that stores the data every 5 minutes. Do not use cron.
+- [x] Start a background scheduler in the app that stores the data every 5 minutes. Do not use cron.
 - [x] Delete the `crontab` file.
-- [ ] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
-- [ ] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
-- [ ] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
+- [x] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
+- [x] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
+- [x] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
 - [ ] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
 - [ ] Change `/readyz` to check these conditions:
   - [ ] Half of the senseBoxes, plus one, are reachable.

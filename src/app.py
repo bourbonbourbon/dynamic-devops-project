@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from http import HTTPStatus
 from pathlib import Path
 from threading import Thread
@@ -64,13 +65,19 @@ valkey_client = valkey.Valkey(host=config["VKURL"], port=int(config["VKPORT"]), 
 
 SENSEBOX_FAIL_COUNT = 0
 
+CYCLE_SECONDS = 300  # Refresh interval and cache lifetime
+
+
+class StorageWriteError(Exception):
+    """Raised when a required write to object storage fails."""
+
 
 def ensure_bucket():
     try:
         s3_client.head_bucket(Bucket=bucket_name)
     except ClientError:
         s3_client.create_bucket(Bucket=bucket_name)
-        print("created using bucket", bucket_name)
+        logger.info("Created bucket %s", bucket_name)
 
 
 def _try_ensure_bucket():
@@ -93,7 +100,12 @@ def print_version():
     return jsonify({"version": __version__}), 200
 
 
-def query_main_and_store():
+def refresh_cache(require_storage=False):
+    """Fetch the temperatures, store them in RustFS, and cache them in Valkey.
+
+    This function does not use Flask request objects, so the scheduler
+    thread can call it.
+    """
     api = OpenSenseMap(base_url=BASE_URL)
     data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
     global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
@@ -108,11 +120,30 @@ def query_main_and_store():
             ContentType="application/json",
         )
     except (BotoCoreError, ClientError) as err:
+        if require_storage:
+            raise StorageWriteError(str(err)) from err
         logger.error("Could not write to object storage: %s", err)
 
     if return_code == HTTPStatus.OK:
-        valkey_client.set(name="avg-temp", value=payload, ex=300)
+        valkey_client.set(name="avg-temp", value=payload, ex=CYCLE_SECONDS)
+    return data, return_code
+
+
+def query_main_and_store():
+    data, return_code = refresh_cache()
     return jsonify(data), return_code
+
+
+def run_scheduler():
+    """Create the bucket, then refresh the cache and storage every cycle."""
+    _try_ensure_bucket()
+    while True:
+        try:
+            refresh_cache()
+        except Exception:  # pylint: disable=broad-exception-caught
+            # The loop must keep running after any failure.
+            logger.exception("Scheduled refresh failed")
+        time.sleep(CYCLE_SECONDS)
 
 
 @app.route(rule="/temperature")
@@ -136,9 +167,16 @@ def temperature():
 
 @app.route(rule="/store")
 def store():
-    query_main_and_store()
     total_store_requests.inc()
-    return temperature()
+    try:
+        data, return_code = refresh_cache(require_storage=True)
+    except StorageWriteError as err:
+        logger.error("Store failed: %s", err)
+        return (
+            jsonify({"error": "object storage unavailable"}),
+            HTTPStatus.SERVICE_UNAVAILABLE,
+        )
+    return jsonify(data), return_code
 
 
 @app.route(rule="/readyz")
@@ -156,5 +194,5 @@ if __name__ == "__main__":
     from waitress import serve
 
     logging.basicConfig(level=logging.INFO)
-    Thread(target=_try_ensure_bucket, daemon=True).start()
+    Thread(target=run_scheduler, daemon=True).start()
     serve(app=app, host=config["HOST"], port=int(config["PORT"]))
