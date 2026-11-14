@@ -126,37 +126,54 @@ def print_version():
     return jsonify({"version": __version__}), 200
 
 
+def fetch_temperature():
+    """Fetch the average temperature and record the failed senseBox count."""
+    global SENSEBOX_FAIL_COUNT  # pylint: disable=global-statement
+    api = OpenSenseMap(base_url=BASE_URL)
+    data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
+    SENSEBOX_FAIL_COUNT = fail_count
+    failed_sensebox_count.set(fail_count)
+    return data, return_code
+
+
+def write_cache(data, return_code):
+    """Write a successful result to Valkey. Do not cache error results."""
+    global LAST_CACHE_REFRESH  # pylint: disable=global-statement
+    if return_code != HTTPStatus.OK:
+        return
+    valkey_client.set(name="avg-temp", value=json.dumps(obj=data), ex=CYCLE_SECONDS)
+    LAST_CACHE_REFRESH = time.time()
+    last_cache_refresh.set(LAST_CACHE_REFRESH)
+
+
+def write_storage(data, require_storage=False):
+    """Write the result to RustFS. Raise StorageWriteError if it is required."""
+    global LAST_STORE_WRITE  # pylint: disable=global-statement
+    try:
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=object_name,
+            Body=json.dumps(obj=data).encode(encoding="UTF-8"),
+            ContentType="application/json",
+        )
+    except (BotoCoreError, ClientError) as err:
+        if require_storage:
+            raise StorageWriteError(str(err)) from err
+        logger.error("Could not write to object storage: %s", err)
+        return
+    LAST_STORE_WRITE = time.time()
+    last_store_write.set(LAST_STORE_WRITE)
+
+
 def refresh_cache(require_storage=False):
     """Fetch the temperatures, store them in RustFS, and cache them in Valkey.
 
     This function does not use Flask request objects, so the scheduler
     thread can call it.
     """
-    global SENSEBOX_FAIL_COUNT, LAST_CACHE_REFRESH, LAST_STORE_WRITE  # pylint: disable=global-statement
-    api = OpenSenseMap(base_url=BASE_URL)
-    data, return_code, fail_count = api.get_avg_temperature(sense_boxes=senseBoxes)
-    SENSEBOX_FAIL_COUNT = fail_count
-    failed_sensebox_count.set(fail_count)
-
-    payload = json.dumps(obj=data)
-    try:
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=object_name,
-            Body=payload.encode(encoding="UTF-8"),
-            ContentType="application/json",
-        )
-        LAST_STORE_WRITE = time.time()
-        last_store_write.set(LAST_STORE_WRITE)
-    except (BotoCoreError, ClientError) as err:
-        if require_storage:
-            raise StorageWriteError(str(err)) from err
-        logger.error("Could not write to object storage: %s", err)
-
-    if return_code == HTTPStatus.OK:
-        valkey_client.set(name="avg-temp", value=payload, ex=CYCLE_SECONDS)
-        LAST_CACHE_REFRESH = time.time()
-        last_cache_refresh.set(LAST_CACHE_REFRESH)
+    data, return_code = fetch_temperature()
+    write_storage(data, require_storage=require_storage)
+    write_cache(data, return_code)
     return data, return_code
 
 
