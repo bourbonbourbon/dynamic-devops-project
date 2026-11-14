@@ -195,6 +195,23 @@ pylint --fail-under=9 src tests
 The file `pytest.ini` sets the import path for pytest.
 The file `.pylintrc` sets the import path for pylint.
 
+### Integration tests
+
+The integration tests are in `tests/integration/`. They use real Valkey and RustFS
+containers. They mock only the openSenseMap API.
+
+A normal `pytest` run skips them. Run them with the marker:
+
+```bash
+pytest -m integration -v
+```
+
+> **Warning:** The tests delete all keys in Valkey database 0. They also delete the
+> stored object in the bucket. Use disposable containers only. Set `S3_BUCKET` to a
+> test bucket name when you run them on your own machine.
+
+CI runs the integration tests in the job `integration-tests`.
+
 ## Docker
 
 Build the image:
@@ -296,7 +313,7 @@ Done:
 Open:
 
 - [x] `/cache` endpoint
-- [ ] Integration tests with real Valkey and RustFS
+- [x] Integration tests with real Valkey and RustFS
 - [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
 - [ ] Valkey manifests
 - [ ] Helm chart and Kustomize manifests

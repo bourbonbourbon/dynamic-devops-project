@@ -83,8 +83,8 @@
 - [x] Test the RustFS error path.
 - [x] Mock Valkey and RustFS in unit tests.
 - [x] Add `pytest-cov` and set a minimum coverage value in CI.
-- [ ] Write integration tests that use real Valkey and RustFS containers. Keep them in a separate folder such as `tests/integration/`.
-- [ ] Mark integration tests so that they run in a separate CI job.
+- [x] Write integration tests that use real Valkey and RustFS containers. Keep them in a separate folder such as `tests/integration/`.
+- [x] Mark integration tests so that they run in a separate CI job.
 - [x] Add the README section that explains how to run each test type. The checklist item "documentation on how to test" requires this.
 
 ## F. Docker
@@ -116,14 +116,14 @@
 
 ## H. GitHub Actions CI
 
-- [ ] Add RustFS in CI
+- [x] Add RustFS in CI
 - [x] Add `permissions: contents: read` at the top of the workflow. Grant write permissions only to the jobs that need them.
 - [ ] Add a `pull_request` trigger so that CI runs before merge.
 - [x] Update `actions/setup-python` from `v3` to a current version.
 - [ ] Pin every action to a full commit SHA. The Scorecard check "Pinned-Dependencies" requires this.
 - [x] Remove the duplicate venv setup from the lint job, or use the venv for all commands.
 - [ ] Remove the hardcoded MinIO or RustFS password from the workflow file.
-- [ ] Add the integration test job (checklist item 4.4).
+- [x] Add the integration test job (checklist item 4.4).
 - [ ] Add SonarQube with the Quality Gate check, or Semgrep (checklist item 4.4). For SonarQube, you must set up a server or use SonarCloud (**decide**).
 - [x] Add a step that checks the Dockerfile with Hadolint.
 - [ ] Keep Terrascan and check that it passes.
