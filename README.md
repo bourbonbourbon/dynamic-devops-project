@@ -212,6 +212,35 @@ pytest -m integration -v
 
 CI runs the integration tests in the job `integration-tests`.
 
+## Tools
+
+| Tool | Use | Command |
+|---|---|---|
+| [black](https://github.com/psf/black) | Formats the Python code. | `black src tests` |
+| [isort](https://pycqa.github.io/isort/) | Sorts the imports. | `isort src tests` |
+| [pylint](https://pylint.readthedocs.io) | Checks the code. CI fails below a score of 9. The settings are in `.pylintrc`. | `pylint --fail-under=9 src tests` |
+| [pigar](https://github.com/damnever/pigar) | Generates `requirements.txt` from the imports in the code. | `pigar generate` |
+| [pytest](https://docs.pytest.org) | Runs the tests. The settings are in `pytest.ini`. | `pytest` |
+| pytest-cov | Measures the test coverage. The settings are in `.coveragerc`. | `pytest --cov` |
+| [Hadolint](https://github.com/hadolint/hadolint) | Checks the Dockerfile. | `docker run --rm -i hadolint/hadolint < Dockerfile` |
+| [Terrascan](https://github.com/tenable/terrascan) | Scans the Kubernetes manifests in `k8s/`. CI only. | - |
+| [OpenSSF Scorecard](https://github.com/ossf/scorecard) | Checks the security practices of the repository. CI only. | - |
+| Docker, KIND, kubectl | Run the containers and the local Kubernetes cluster. | - |
+
+Format the code before you commit:
+
+```bash
+isort src tests
+black src tests
+```
+
+The file `.isort.cfg` sets `profile = black`. With this setting, isort and black do not change each other's output.
+
+The file `requirements.txt` contains the packages that the application needs.
+The file `requirements-dev.txt` contains the packages for tests and linting.
+Check `requirements.txt` after you run pigar. Pigar can add test packages to the file.
+
+
 ## Docker
 
 Build the image:
