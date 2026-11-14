@@ -53,7 +53,7 @@
 - [x] Start a background scheduler in the app that stores the data every 5 minutes. Do not use cron.
 - [x] Delete the `crontab` file.
 - [x] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
-- [x] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
+- [ ] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
 - [x] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
 - [x] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
 - [x] Change `/readyz` to check these conditions:
@@ -69,19 +69,19 @@
 - [x] Remove `tests/weather.json`. Build the test data in code instead.
 - [x] Control the current time in tests. Done without freezegun: the tests pass a fixed now, and they replace the clock in the app module.
 - [x] Test `/version`.
-- [ ] Test `/temperature` with a cache miss.
+- [x] Test `/temperature` with a cache miss.
 - [x] Test `/temperature` with a cache hit.
-- [ ] Test `/temperature` with stale data.
-- [ ] Test `/temperature` when all senseBoxes fail.
-- [ ] Test `/temperature` when some senseBoxes fail.
+- [x] Test `/temperature` with stale data.
+- [x] Test `/temperature` when all senseBoxes fail.
+- [x] Test `/temperature` when some senseBoxes fail.
 - [x] Test the status value for each threshold range.
 - [x] Test `/store`.
 - [ ] Test `/cache`.
-- [ ] Test `/readyz` in a healthy state and in each unhealthy state.
+- [x] Test `/readyz` in a healthy state and in each unhealthy state.
 - [ ] Test `/metrics`.
-- [ ] Test the Valkey error path.
-- [ ] Test the RustFS error path.
-- [ ] Mock Valkey and RustFS in unit tests.
+- [x] Test the Valkey error path.
+- [x] Test the RustFS error path.
+- [x] Mock Valkey and RustFS in unit tests.
 - [ ] Add `pytest-cov` and set a minimum coverage value in CI.
 - [ ] Write integration tests that use real Valkey and RustFS containers. Keep them in a separate folder such as `tests/integration/`.
 - [ ] Mark integration tests so that they run in a separate CI job.

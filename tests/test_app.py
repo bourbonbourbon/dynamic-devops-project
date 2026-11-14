@@ -10,7 +10,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from botocore.exceptions import ClientError
+import requests
+from botocore.exceptions import ClientError, EndpointConnectionError
 from prometheus_client import REGISTRY
 from valkey.exceptions import ValkeyError
 
@@ -452,3 +453,217 @@ def test_readyz_cache_age_boundary(client, ready_app, extra_seconds, expected_st
     response = client.get("/readyz")
 
     assert response.status_code == expected_status
+
+
+OK_RESULT = ({"avg_temp": 6.77, "status": "Too Cold"}, HTTPStatus.OK, 0)
+
+
+def make_response(status_code, payload=None):
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = payload
+    return response
+
+
+FAILURES = [
+    pytest.param(
+        lambda *_args, **_kwargs: make_response(HTTPStatus.NOT_FOUND), id="http-404"
+    ),
+    pytest.param(requests.ConnectionError("no network"), id="connection-error"),
+]
+
+
+# --- /temperature: cache miss, stale data, failed senseBoxes ---
+
+
+@patch("app.s3_client")
+@patch("requests.request")
+def test_temperature_cache_miss_fills_cache(mock_request, mock_s3, client):
+    mock_request.return_value = make_response(
+        HTTPStatus.OK, fresh_box_payload(value=6.77)
+    )
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.OK
+    assert json.loads(valkey_client.get(name="avg-temp")) == response.json
+    assert 0 < valkey_client.ttl(name="avg-temp") <= app_module.CYCLE_SECONDS
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_temperature_refreshes_when_cache_entry_expired(
+    mock_s3, mock_api_class, client
+):
+    old_value = json.dumps({"avg_temp": 12.5, "status": "Good"})
+    valkey_client.set(name="avg-temp", value=old_value, px=1)
+    time.sleep(0.05)
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+
+    response = client.get("/temperature")
+
+    assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_temperature_ignores_invalid_cache_entry(mock_s3, mock_api_class, client):
+    valkey_client.set(name="avg-temp", value="{'avg_temp': 12.5}", ex=300)
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+
+    response = client.get("/temperature")
+
+    assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
+    assert json.loads(valkey_client.get(name="avg-temp")) == response.json
+    mock_s3.put_object.assert_called_once()
+
+
+@pytest.mark.parametrize("failure", FAILURES)
+@patch("app.s3_client")
+@patch("requests.request")
+def test_temperature_returns_500_when_all_senseboxes_fail(
+    mock_request, mock_s3, client, failure
+):
+    mock_request.side_effect = failure
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.json == {"avg_temp": 0, "status": "Internal Error"}
+    assert valkey_client.get(name="avg-temp") is None
+    assert metric_value("failed_sensebox_count") == len(app_module.senseBoxes)
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.s3_client")
+@patch("requests.request")
+def test_temperature_returns_500_when_all_measurements_are_stale(
+    mock_request, mock_s3, client
+):
+    mock_request.return_value = make_response(
+        HTTPStatus.OK, fresh_box_payload(age=timedelta(hours=2))
+    )
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert metric_value("failed_sensebox_count") == len(app_module.senseBoxes)
+    mock_s3.put_object.assert_called_once()
+
+
+@patch("app.s3_client")
+@patch("requests.request")
+def test_temperature_with_some_senseboxes_failing(mock_request, mock_s3, client):
+    total = len(app_module.senseBoxes)
+    failing = 2
+    good = make_response(HTTPStatus.OK, fresh_box_payload(value=20.0))
+    bad = make_response(HTTPStatus.NOT_FOUND)
+    mock_request.side_effect = [bad] * failing + [good] * (total - failing)
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json == {"avg_temp": 20.0, "status": "Good"}
+    assert metric_value("failed_sensebox_count") == failing
+    mock_s3.put_object.assert_called_once()
+
+
+# --- /metrics: counters ---
+
+
+def test_version_request_increments_counter(client):
+    before = metric_value("version_requests_total")
+
+    client.get("/version")
+
+    assert metric_value("version_requests_total") == before + 1
+
+
+def test_temperature_request_increments_counter_on_cache_hit(client):
+    valkey_client.set(
+        name="avg-temp",
+        value=json.dumps({"avg_temp": 12.5, "status": "Good"}),
+        ex=300,
+    )
+    before = metric_value("temp_requests_total")
+
+    client.get("/temperature")
+
+    assert metric_value("temp_requests_total") == before + 1
+
+
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_store_request_increments_counter(mock_s3, mock_api_class, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    before = metric_value("store_requests_total")
+
+    client.get("/store")
+
+    assert metric_value("store_requests_total") == before + 1
+    mock_s3.put_object.assert_called_once()
+
+
+# --- Valkey error path ---
+
+
+@patch("app.valkey_client")
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_store_returns_503_when_cache_is_down(
+    mock_s3, mock_api_class, mock_valkey, client
+):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    mock_valkey.set.side_effect = ValkeyError("cache down")
+
+    response = client.get("/store")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json == {"error": "cache unavailable"}
+    mock_s3.put_object.assert_called_once()
+
+
+# --- RustFS error path ---
+
+
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_temperature_still_works_when_storage_is_down(mock_s3, mock_api_class, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    mock_s3.put_object.side_effect = ClientError(
+        {"Error": {"Code": "500", "Message": "down"}}, "PutObject"
+    )
+
+    response = client.get("/temperature")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
+    assert valkey_client.get(name="avg-temp") is not None
+
+
+@patch("app.OpenSenseMap")
+@patch("app.s3_client")
+def test_store_returns_503_on_storage_connection_error(mock_s3, mock_api_class, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    mock_s3.put_object.side_effect = EndpointConnectionError(
+        endpoint_url="http://rustfs:9000"
+    )
+
+    response = client.get("/store")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json == {"error": "object storage unavailable"}
+    assert valkey_client.get(name="avg-temp") is None
+
+
+@patch("app.ensure_bucket")
+def test_failed_bucket_setup_is_logged_not_raised(mock_ensure, caplog):
+    mock_ensure.side_effect = EndpointConnectionError(endpoint_url="http://rustfs:9000")
+    run = app_module._try_ensure_bucket  # pylint: disable=protected-access
+
+    with caplog.at_level(logging.WARNING):
+        run()
+
+    assert "Object storage is not ready" in caplog.text
