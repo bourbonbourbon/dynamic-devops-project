@@ -89,7 +89,7 @@
 
 ## F. Docker
 
-- [ ] Pin the base image `python:3.12-alpine` to a digest.
+- [ ] Pin the base image `python:3.14-alpine` to a digest.
 - [ ] Confirm that the container runs as UID 65534 (`nobody`).
 - [ ] Add a `HEALTHCHECK` or confirm that the Kubernetes probes replace it.
 - [ ] Use `pip install --require-hashes` with a locked requirements file (optional, but recommended).

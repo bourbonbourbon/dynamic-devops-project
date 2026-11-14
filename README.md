@@ -122,7 +122,7 @@ If a variable is not set, the service reads it from the `.env` file in the proje
 
 ## Requirements
 
-- Python 3.12
+- Python 3.14
 - Docker (for Valkey, RustFS, and the image build)
 - `kubectl` and `kind` (for the Kubernetes steps)
 
@@ -133,7 +133,7 @@ If a variable is not set, the service reads it from the `.env` file in the proje
    ```bash
    python -m venv venv
    source venv/bin/activate
-   pip install -r requirements-dev.txt
+   pip install -r requirements-test.txt
    ```
 
 2. Start Valkey:
@@ -237,7 +237,7 @@ black src tests
 The file `.isort.cfg` sets `profile = black`. With this setting, isort and black do not change each other's output.
 
 The file `requirements.txt` contains the packages that the application needs.
-The file `requirements-dev.txt` contains the packages for tests and linting.
+The file `requirements-test.txt` contains the packages for tests and linting.
 Check `requirements.txt` after you run pigar. Pigar can add test packages to the file.
 
 
@@ -324,7 +324,7 @@ Two more workflows run security checks:
 ├── Dockerfile
 ├── pytest.ini
 ├── requirements.txt
-└── requirements-dev.txt
+└── requirements-test.txt
 ```
 
 ## Project status

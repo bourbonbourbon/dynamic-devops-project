@@ -12,7 +12,7 @@ chmod 777 $HOME/rustfs-data/
 
 docker run -d --name rustfs -p 9000:9000 -p 9001:9001   -e RUSTFS_ACCESS_KEY=ROOTUSER -e RUSTFS_SECRET_KEY=CHANGEME123   -v "$HOME/rustfs-data:/data" rustfs/rustfs:latest
 
-docker run -p 6379:6379 -it valkey/valkey:latest
+docker run -d --name valkey -p 6379:6379 -it valkey/valkey:latest
 
    * * * * * { printf "%s: " "$(date "+%F %T")"; curl -s http://localhost:8080/temperature | jq ; } >> /tmp/test.txt 2>&1
    */5 * * * * (curl -s http://localhost:8080/temperature)
