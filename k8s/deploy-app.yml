@@ -36,7 +36,7 @@ spec:
           value: "valkey-service"
         - name: VKPORT
           value: "6379"
-      image: ghcr.io/bourbonbourbon/ddp:0.3.0
+      image: ghcr.io/bourbonbourbon/ddp:0.4.0
       resources:
         requests:
           memory: 32Mi
