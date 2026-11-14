@@ -50,6 +50,7 @@ The service rounds the average first. Then it selects the status.
 | `GET /store` | Fetches new data and writes it to RustFS and to the cache. | `200` (same body as `/temperature`) | `503` `{"error": "object storage unavailable"}` when the RustFS write fails. |
 | `GET /readyz` | Readiness check. | `200` | `503` when a check fails. |
 | `GET /metrics` | Prometheus metrics. | `200` | - |
+| `GET /cache` | Fetches new data and writes it to the Valkey cache only. Does not use RustFS. | `200` (same body as `/temperature`) | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
 
 ### Readiness (`/readyz`)
 
@@ -87,6 +88,7 @@ The service exports the default Python metrics and these custom metrics:
 | `cache_last_refresh_timestamp_seconds` | gauge | Unix time of the last successful cache write. |
 | `store_last_write_timestamp_seconds` | gauge | Unix time of the last successful RustFS write. |
 | `failed_sensebox_count` | gauge | Number of failed senseBoxes in the last refresh. |
+| `cache_requests_total` | counter | Number of `/cache` requests. |
 
 Prometheus calculates the age at query time:
 
@@ -289,7 +291,7 @@ Done:
 
 Open:
 
-- [ ] `/cache` endpoint
+- [x] `/cache` endpoint
 - [ ] Integration tests with real Valkey and RustFS
 - [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
 - [ ] Valkey manifests

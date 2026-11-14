@@ -53,7 +53,7 @@
 - [x] Start a background scheduler in the app that stores the data every 5 minutes. Do not use cron.
 - [x] Delete the `crontab` file.
 - [x] Change `/temperature` so it reads from the cache. Refresh the cache only when the data is stale.
-- [ ] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
+- [x] Add the `/cache` endpoint. It updates the cached data in Valkey directly.
 - [x] Change the `/store` endpoint so it writes to RustFS directly. It must not depend on the cron behavior.
 - [x] Add custom Prometheus metrics. Examples: last successful refresh time, failed senseBox count, cache age, and store age.
 - [x] Change `/readyz` to check these conditions:
@@ -76,9 +76,9 @@
 - [x] Test `/temperature` when some senseBoxes fail.
 - [x] Test the status value for each threshold range.
 - [x] Test `/store`.
-- [ ] Test `/cache`.
+- [x] Test `/cache`.
 - [x] Test `/readyz` in a healthy state and in each unhealthy state.
-- [ ] Test `/metrics`.
+- [x] Test `/metrics`.
 - [x] Test the Valkey error path.
 - [x] Test the RustFS error path.
 - [x] Mock Valkey and RustFS in unit tests.

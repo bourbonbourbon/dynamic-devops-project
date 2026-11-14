@@ -667,3 +667,121 @@ def test_failed_bucket_setup_is_logged_not_raised(mock_ensure, caplog):
         run()
 
     assert "Object storage is not ready" in caplog.text
+
+
+# --- /cache ---
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_updates_valkey_only(mock_api_class, mock_s3, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+
+    response = client.get("/cache")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json == {"avg_temp": 6.77, "status": "Too Cold"}
+    assert json.loads(valkey_client.get(name="avg-temp")) == response.json
+    assert 0 < valkey_client.ttl(name="avg-temp") <= app_module.CYCLE_SECONDS
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_replaces_an_existing_entry(mock_api_class, mock_s3, client):
+    old_value = json.dumps({"avg_temp": 12.5, "status": "Good"})
+    valkey_client.set(name="avg-temp", value=old_value, ex=300)
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+
+    client.get("/cache")
+
+    assert json.loads(valkey_client.get(name="avg-temp")) == {
+        "avg_temp": 6.77,
+        "status": "Too Cold",
+    }
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_sets_only_the_cache_timestamp(
+    mock_api_class, mock_s3, client, monkeypatch
+):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    monkeypatch.setattr(app_module, "LAST_CACHE_REFRESH", 0.0)
+    monkeypatch.setattr(app_module, "LAST_STORE_WRITE", 0.0)
+    store_gauge_before = metric_value("store_last_write_timestamp_seconds")
+
+    before = time.time()
+    client.get("/cache")
+    after = time.time()
+
+    assert before <= app_module.LAST_CACHE_REFRESH <= after
+    assert before <= metric_value("cache_last_refresh_timestamp_seconds") <= after
+    assert app_module.LAST_STORE_WRITE == 0.0
+    assert metric_value("store_last_write_timestamp_seconds") == store_gauge_before
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_returns_500_and_keeps_old_entry_when_all_senseboxes_fail(
+    mock_api_class, mock_s3, client
+):
+    old_value = json.dumps({"avg_temp": 12.5, "status": "Good"})
+    valkey_client.set(name="avg-temp", value=old_value, ex=300)
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 0, "status": "Internal Error"},
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+        len(app_module.senseBoxes),
+    )
+
+    response = client.get("/cache")
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.json == {"avg_temp": 0, "status": "Internal Error"}
+    assert valkey_client.get(name="avg-temp").decode(encoding="UTF-8") == old_value
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.valkey_client")
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_returns_503_when_cache_is_down(
+    mock_api_class, mock_s3, mock_valkey, client
+):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    mock_valkey.set.side_effect = ValkeyError("cache down")
+
+    response = client.get("/cache")
+
+    assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+    assert response.json == {"error": "cache unavailable"}
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_records_failed_sensebox_count(mock_api_class, mock_s3, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = (
+        {"avg_temp": 6.77, "status": "Too Cold"},
+        HTTPStatus.OK,
+        2,
+    )
+
+    client.get("/cache")
+
+    assert metric_value("failed_sensebox_count") == 2
+    mock_s3.put_object.assert_not_called()
+
+
+@patch("app.s3_client")
+@patch("app.OpenSenseMap")
+def test_cache_request_increments_counter(mock_api_class, mock_s3, client):
+    mock_api_class.return_value.get_avg_temperature.return_value = OK_RESULT
+    before = metric_value("cache_requests_total")
+
+    client.get("/cache")
+
+    assert metric_value("cache_requests_total") == before + 1
+    mock_s3.put_object.assert_not_called()

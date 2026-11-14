@@ -32,6 +32,10 @@ total_store_requests = Counter(
     name="store_requests", documentation="Total Number of store requests"
 )
 
+total_cache_requests = Counter(
+    name="cache_requests", documentation="Total Number of cache requests"
+)
+
 last_cache_refresh = Gauge(
     name="cache_last_refresh_timestamp_seconds",
     documentation="Unix time of the last successful cache refresh",
@@ -224,6 +228,14 @@ def store():
             jsonify({"error": "object storage unavailable"}),
             HTTPStatus.SERVICE_UNAVAILABLE,
         )
+    return jsonify(data), return_code
+
+
+@app.route(rule="/cache")
+def update_cache():
+    total_cache_requests.inc()
+    data, return_code = fetch_temperature()
+    write_cache(data, return_code)
     return jsonify(data), return_code
 
 
