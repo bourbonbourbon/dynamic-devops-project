@@ -29,7 +29,7 @@
 - [x] Remove the `sys.path.append` block from `tests/test_app.py`.
 - [x] Update the pylint command in CI to `pylint --fail-under=9 src tests` with `PYTHONPATH: src`.
 - [x] Update the version lookup paths in all CI jobs.
-- [ ] Update the local run command in the README.
+- [x] Update the local run command in the README.
 - [x] Check that `.dockerignore` does not exclude `src/`.
 - [x] Check that `.dockerignore` excludes `.git`, `venv`, `rustfs-data`, and `.env`.
 
@@ -61,13 +61,13 @@
   - [x] Cached data is no older than two cycles.
   - [x] Stored data is no older than two cycles.
 - [x] Confirm the status thresholds (**decide**). The current rules leave gaps between 10 and 11 and between 36 and 37.
-- [ ] Confirm that `/version`, `/temperature`, and `/metrics` return the values the spec requires.
+- [x] Confirm that `/version`, `/temperature`, and `/metrics` return the values the spec requires.
 - [ ] Use Conventional Commits for all new commits. Add a commit message check in CI if you want enforcement.
 
 ## E. Tests
 
 - [x] Remove `tests/weather.json`. Build the test data in code instead.
-- [ ] Control the current time in tests with `freezegun` or a similar library.
+- [x] Control the current time in tests. Done without freezegun: the tests pass a fixed now, and they replace the clock in the app module.
 - [x] Test `/version`.
 - [ ] Test `/temperature` with a cache miss.
 - [x] Test `/temperature` with a cache hit.
@@ -85,7 +85,7 @@
 - [ ] Add `pytest-cov` and set a minimum coverage value in CI.
 - [ ] Write integration tests that use real Valkey and RustFS containers. Keep them in a separate folder such as `tests/integration/`.
 - [ ] Mark integration tests so that they run in a separate CI job.
-- [ ] Add the README section that explains how to run each test type. The checklist item "documentation on how to test" requires this.
+- [x] Add the README section that explains how to run each test type. The checklist item "documentation on how to test" requires this.
 
 ## F. Docker
 

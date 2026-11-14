@@ -6,6 +6,7 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -410,3 +411,44 @@ def test_readyz_not_ready_before_first_refresh(client, ready_app):
 
     assert response.status_code == HTTPStatus.SERVICE_UNAVAILABLE
     assert response.json["ready"] is False
+
+
+@pytest.mark.parametrize(
+    "age, expected",
+    [
+        (timedelta(hours=1), 20.5),
+        (timedelta(hours=1, seconds=1), None),
+    ],
+)
+def test_measurement_age_boundary(age, expected):
+    now = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    data = fresh_box_payload(value=20.5)
+    data["sensors"][0]["lastMeasurement"]["createdAt"] = (now - age).isoformat()
+
+    api = OpenSenseMap(base_url="https://example.test")
+
+    result = api._process_temperature_data(
+        data, now=now
+    )  # pylint: disable=protected-access
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "extra_seconds, expected_status",
+    [
+        (0, HTTPStatus.OK),
+        (1, HTTPStatus.SERVICE_UNAVAILABLE),
+    ],
+)
+def test_readyz_cache_age_boundary(client, ready_app, extra_seconds, expected_status):
+    fixed_now = 10_000.0
+    max_age = 2 * app_module.CYCLE_SECONDS
+    ready_app.setattr(app_module, "time", SimpleNamespace(time=lambda: fixed_now))
+    ready_app.setattr(
+        app_module, "LAST_CACHE_REFRESH", fixed_now - max_age - extra_seconds
+    )
+    ready_app.setattr(app_module, "LAST_STORE_WRITE", fixed_now)
+
+    response = client.get("/readyz")
+
+    assert response.status_code == expected_status
