@@ -3,6 +3,8 @@
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/bourbonbourbon/dynamic-devops-project/badge)](https://scorecard.dev/viewer/?uri=github.com/bourbonbourbon/dynamic-devops-project)
 
+[![CI](https://github.com/bourbonbourbon/dynamic-devops-project/actions/workflows/main.yml/badge.svg)](https://github.com/bourbonbourbon/dynamic-devops-project/actions/workflows/main.yml)
+
 # HiveBox (ddp)
 
 HiveBox is a small Python web service. It is my implementation of the
