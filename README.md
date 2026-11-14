@@ -14,7 +14,7 @@ The service reads temperature data from [openSenseMap](https://opensensemap.org)
 senseBoxes. It calculates the average temperature and gives it a status:
 `Too Cold`, `Good`, or `Too Hot`.
 
-Current version: `0.3.0` (see `src/version.py`).
+Current version: `0.4.0` (see `src/version.py`).
 
 ## How it works
 
@@ -47,7 +47,7 @@ The service rounds the average first. Then it selects the status.
 
 | Endpoint | Description | Success | Failure |
 |---|---|---|---|
-| `GET /version` | Returns the application version. | `200` `{"version": "0.3.0"}` | - |
+| `GET /version` | Returns the application version. | `200` `{"version": "0.4.0"}` | - |
 | `GET /temperature` | Returns the average temperature from the cache. On a cache miss, it fetches new data. | `200` `{"avg_temp": 14.98, "status": "Good"}` | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
 | `GET /store` | Fetches new data and writes it to RustFS and to the cache. | `200` (same body as `/temperature`) | `503` `{"error": "object storage unavailable"}` when the RustFS write fails. |
 | `GET /readyz` | Readiness check. | `200` | `503` when a check fails. |

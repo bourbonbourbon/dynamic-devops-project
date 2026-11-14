@@ -254,7 +254,7 @@
 - [ ] Document each phase as a pull request description.
 - [ ] Mark every item in the README checklist as complete, or explain why it is not complete.
 - [ ] Delete `todo.txt` and `notes.txt` after you move their content.
-- [ ] Delete `tests/weather.json` if it still exists.
+- [x] Delete `tests/weather.json` if it still exists.
 
 ## R. Release
 
