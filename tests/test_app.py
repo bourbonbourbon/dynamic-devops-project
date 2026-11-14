@@ -785,3 +785,22 @@ def test_cache_request_increments_counter(mock_api_class, mock_s3, client):
 
     assert metric_value("cache_requests_total") == before + 1
     mock_s3.put_object.assert_not_called()
+
+
+class StopScheduler(Exception):
+    """Raised by the fake sleep to end the scheduler loop in a test."""
+
+
+@patch("app.time")
+@patch("app.refresh_cache")
+@patch("app._try_ensure_bucket")
+def test_scheduler_survives_a_failed_refresh(mock_ensure, mock_refresh, mock_time):
+    mock_refresh.side_effect = [RuntimeError("boom"), (OK_RESULT[0], HTTPStatus.OK)]
+    mock_time.sleep.side_effect = [None, StopScheduler()]
+
+    with pytest.raises(StopScheduler):
+        app_module.run_scheduler()
+
+    assert mock_refresh.call_count == 2
+    mock_ensure.assert_called_once()
+    mock_time.sleep.assert_called_with(app_module.CYCLE_SECONDS)

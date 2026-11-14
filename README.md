@@ -176,11 +176,13 @@ The unit tests mock RustFS and the openSenseMap API.
 The unit tests use a real Valkey server on `localhost:6379`.
 Start Valkey before you run the tests (see step 2 above).
 
-Run the tests:
+Run the tests with a coverage report:
 
 ```bash
-pytest
+pytest --cov --cov-report=term-missing
 ```
+
+CI fails when the total coverage is below the value `fail_under` in `.coveragerc`.
 
 Run the linter:
 

@@ -82,7 +82,7 @@
 - [x] Test the Valkey error path.
 - [x] Test the RustFS error path.
 - [x] Mock Valkey and RustFS in unit tests.
-- [ ] Add `pytest-cov` and set a minimum coverage value in CI.
+- [x] Add `pytest-cov` and set a minimum coverage value in CI.
 - [ ] Write integration tests that use real Valkey and RustFS containers. Keep them in a separate folder such as `tests/integration/`.
 - [ ] Mark integration tests so that they run in a separate CI job.
 - [x] Add the README section that explains how to run each test type. The checklist item "documentation on how to test" requires this.
