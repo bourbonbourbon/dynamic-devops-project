@@ -133,7 +133,7 @@ If a variable is not set, the service reads it from the `.env` file in the proje
    ```bash
    python -m venv venv
    source venv/bin/activate
-   pip install -r requirements-test.txt
+   pip install --require-hashes -r requirements-test.txt
    ```
 
 2. Start Valkey:
@@ -226,6 +226,7 @@ CI runs the integration tests in the job `integration-tests`.
 | [Terrascan](https://github.com/tenable/terrascan) | Scans the Kubernetes manifests in `k8s/`. CI only. | - |
 | [OpenSSF Scorecard](https://github.com/ossf/scorecard) | Checks the security practices of the repository. CI only. | - |
 | Docker, KIND, kubectl | Run the containers and the local Kubernetes cluster. | - |
+| [pip-tools](https://github.com/jazzband/pip-tools) | Creates the lock files with hashes from `requirements.in` and `requirements-dev.in`. | `pip-compile --generate-hashes --output-file=requirements.txt requirements.in` |
 
 Format the code before you commit:
 

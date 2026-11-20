@@ -92,7 +92,7 @@
 - [x] Pin the base image `python:3.14-alpine` to a digest.
 - [x] Confirm that the container runs as UID 65534 (`nobody`).
 - [x] Add a `HEALTHCHECK` or confirm that the Kubernetes probes replace it.
-- [ ] Use `pip install --require-hashes` with a locked requirements file (optional, but recommended).
+- [x] Use `pip install --require-hashes` with a locked requirements file (optional, but recommended).
 - [ ] Build the image locally with `docker build -t ddp:test --target prod .`.
 - [ ] Run the image locally and call `/version`.
 - [ ] Run Hadolint on the Dockerfile and fix all warnings.

@@ -7,7 +7,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r ./requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r ./requirements.txt
 
 COPY src/ /app/src/
 COPY .env /app/.env
