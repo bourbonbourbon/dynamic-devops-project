@@ -32,3 +32,6 @@ add dependabot
 rustfs no gui/web app
 alt for chmod 777 $HOME/rustfs-data/
 in k8s give some time for the app to get ready?
+docker init containers
+katacontainers
+k8s manifests replace env vars with env file

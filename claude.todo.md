@@ -90,8 +90,8 @@
 ## F. Docker
 
 - [x] Pin the base image `python:3.14-alpine` to a digest.
-- [ ] Confirm that the container runs as UID 65534 (`nobody`).
-- [ ] Add a `HEALTHCHECK` or confirm that the Kubernetes probes replace it.
+- [x] Confirm that the container runs as UID 65534 (`nobody`).
+- [x] Add a `HEALTHCHECK` or confirm that the Kubernetes probes replace it.
 - [ ] Use `pip install --require-hashes` with a locked requirements file (optional, but recommended).
 - [ ] Build the image locally with `docker build -t ddp:test --target prod .`.
 - [ ] Run the image locally and call `/version`.
