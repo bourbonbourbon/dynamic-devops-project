@@ -1,4 +1,4 @@
-FROM python:3.14-alpine AS prod
+FROM python:3.14-alpine@sha256:76c65fc8c52c4d375e958298d9f66198b8fb6b06416c0e5500bf710c19cbaa77 AS prod
 
 WORKDIR /app/
 
