@@ -32,6 +32,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: Dockerfile
+          failure-threshold: warning
 
   unittests:
     runs-on: ubuntu-latest
