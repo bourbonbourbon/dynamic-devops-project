@@ -131,7 +131,7 @@
 - [ ] Review the CI best practices list and check each item (checklist item 4.4).
 - [x] Add `.github/dependabot.yml` for `pip` and `github-actions`.
 - [ ] Confirm that the Scorecard workflow runs and fix every issue it reports (checklist item 3.4).
-- [ ] Add `SECURITY.md`.
+- [x] Add `SECURITY.md`.
 - [x] Configure branch protection on `main`. It must require pull requests and passing CI checks, and it must block direct pushes (`todo.txt` item "don't push directly to main").
 
 ## I. Kubernetes core manifests
