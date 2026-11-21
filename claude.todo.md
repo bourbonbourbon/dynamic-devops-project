@@ -93,13 +93,13 @@
 - [x] Confirm that the container runs as UID 65534 (`nobody`).
 - [x] Add a `HEALTHCHECK` or confirm that the Kubernetes probes replace it.
 - [x] Use `pip install --require-hashes` with a locked requirements file (optional, but recommended).
-- [ ] Build the image locally with `docker build -t ddp:test --target prod .`.
-- [ ] Run the image locally and call `/version`.
-- [ ] Run Hadolint on the Dockerfile and fix all warnings.
-- [ ] Enable Docker Content Trust for builds (`todo.txt` item 4).
+- [x] Build the image locally with `docker build -t ddp:test --target prod .`.
+- [x] Run the image locally and call `/version`.
+- [x] Run Hadolint on the Dockerfile and fix all warnings.
+- [ ] Sign images using Cosign or Notation.
 - [ ] Use BuildKit secrets for any build-time credential (`todo.txt` item 5).
 - [ ] Add Trivy image scanning to CI (`todo.txt` item 6).
-- [ ] Add a build cache to the CI build step (`todo.txt` item 7).
+- [x] Add a build cache to the CI build step (`todo.txt` item 7). Not needed
 - [ ] Add `docker-compose.yml` with the app, Valkey, and RustFS services. This avoids the root user for local runs (`todo.txt` item 24).
 
 ## G. Code quality and developer setup

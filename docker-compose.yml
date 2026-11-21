@@ -1,0 +1,59 @@
+name: ddp
+
+services:
+  valkey:
+    image: valkey/valkey:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-ROOTUSER}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+
+  app:
+    build:
+      context: .
+      target: prod
+    image: ddp:local
+    init: true
+    env_file:
+      - .env
+    environment:
+      S3_ENDPOINT_URL: http://rustfs:9000
+      VKURL: valkey
+      VKPORT: "6379"
+    ports:
+      - "8080:8080"
+    depends_on:
+      valkey:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; test=urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3);print(test.read().decode('utf-8'))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  rustfs-data:
