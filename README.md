@@ -5,6 +5,8 @@
 
 [![CI](https://github.com/bourbonbourbon/dynamic-devops-project/actions/workflows/main.yml/badge.svg)](https://github.com/bourbonbourbon/dynamic-devops-project/actions/workflows/main.yml)
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16984/badge)](https://www.bestpractices.dev/projects/16984)
+
 # HiveBox (ddp)
 
 HiveBox is a small Python web service. It is my implementation of the
