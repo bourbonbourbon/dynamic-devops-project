@@ -1,5 +1,10 @@
 name: Terrascan Workflow
+
 on: [push]
+
+permissions:
+  contents: read
+
 
 jobs:
   terrascan_job:
