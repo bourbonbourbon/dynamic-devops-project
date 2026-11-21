@@ -97,17 +97,17 @@
 - [x] Run the image locally and call `/version`.
 - [x] Run Hadolint on the Dockerfile and fix all warnings.
 - [ ] Sign images using Cosign or Notation.
-- [ ] Use BuildKit secrets for any build-time credential (`todo.txt` item 5).
+- [x] Use BuildKit secrets for any build-time credential (`todo.txt` item 5). Not needed: the build uses no credential.
 - [ ] Add Trivy image scanning to CI (`todo.txt` item 6).
 - [x] Add a build cache to the CI build step (`todo.txt` item 7). Not needed
 - [x] Add `docker-compose.yml` with the app, Valkey, and RustFS services. This avoids the root user for local runs (`todo.txt` item 24).
 
 ## G. Code quality and developer setup
 
-- [ ] Run `black` on all Python files (`todo.txt` item 18).
+- [x] Run `black` on all Python files (`todo.txt` item 18).
 - [x] Add a `.pylintrc` file if you need custom settings.
 - [ ] Add the `.vscode/extensions.json` file with the recommended extensions (`todo.txt` item 19).
-- [ ] Add a pre-commit configuration for black, pylint, and Hadolint (`todo.txt` item 17).
+- [x] Add a pre-commit configuration for black, pylint, and Hadolint (`todo.txt` item 17).
 - [ ] Write the output of pylint and pytest as XML files and upload them as CI artifacts (`todo.txt` item 8).
 - [ ] Check the GitHub Security tab and resolve every alert (`todo.txt` item 15).
 
