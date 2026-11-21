@@ -37,18 +37,6 @@ jobs:
   unittests:
     runs-on: ubuntu-latest
     needs: lint
-    env:
-      PORT: "8080"
-      HOST: "0.0.0.0"
-      SENSEBOXES: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
-      S3_ENDPOINT_URL: "http://localhost:9000"
-      S3_ACCESS_KEY: "ROOTUSER"
-      S3_SECRET_KEY: "unit-test-only"
-      S3_BUCKET: "avg-temp"
-      S3_OBJECT: "avg-temp"
-      S3_REGION: "us-east-1"
-      VKURL: "localhost"
-      VKPORT: "6379"
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -61,8 +49,8 @@ jobs:
       - name: Install dependencies
         run: pip install --require-hashes -r requirements.txt -r requirements-test.txt
 
-      - name: Run valkey docker
-        run: docker run -d -p 6379:6379 --name valkey valkey/valkey:latest
+      - name: Start Valkey and RustFS with Compose
+        run: docker compose up -d --wait valkey rustfs
 
       - name: Run pytest with coverage
         run: pytest --cov --cov-report=term-missing --cov-report=xml
@@ -71,27 +59,17 @@ jobs:
         if: always()
         run: coverage report --format=markdown --fail-under=0 >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Stop and remove valkey
+      - name: Show service logs after a failure
+        if: failure()
+        run: docker compose logs valkey rustfs
+
+      - name: Stop and remove the services
         if: always()
-        run: |
-          docker stop valkey
-          docker rm valkey
+        run: docker compose down -v
   
   integration-tests:
     runs-on: ubuntu-latest
     needs: lint
-    env:
-      PORT: "8080"
-      HOST: "0.0.0.0"
-      SENSEBOXES: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
-      S3_ENDPOINT_URL: "http://localhost:9000"
-      S3_ACCESS_KEY: "ROOTUSER"
-      S3_SECRET_KEY: "integration-test-only"
-      S3_BUCKET: "avg-temp-integration"
-      S3_OBJECT: "avg-temp"
-      S3_REGION: "us-east-1"
-      VKURL: "localhost"
-      VKPORT: "6379"
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -104,45 +82,19 @@ jobs:
       - name: Install dependencies
         run: pip install --require-hashes -r requirements.txt -r requirements-test.txt
 
-      - name: Start Valkey
-        run: docker run -d -p 6379:6379 --name valkey valkey/valkey:latest
-
-      - name: Start RustFS
-        run: |
-          docker run -d -p 9000:9000 --name rustfs \
-            -e RUSTFS_ACCESS_KEY="$S3_ACCESS_KEY" \
-            -e RUSTFS_SECRET_KEY="$S3_SECRET_KEY" \
-            rustfs/rustfs:latest
-
-      - name: Wait for the services
-        run: |
-          for i in $(seq 1 30); do
-            if [ "$(docker exec valkey valkey-cli ping)" = "PONG" ] \
-              && curl -s -o /dev/null http://localhost:9000/; then
-              echo "Services are ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Services did not start"
-          docker logs valkey
-          docker logs rustfs
-          exit 1
+      - name: Start Valkey and RustFS with Compose
+        run: docker compose up -d --wait valkey rustfs
 
       - name: Run integration tests
         run: pytest -m integration -v
 
       - name: Show service logs after a failure
         if: failure()
-        run: |
-          docker logs valkey
-          docker logs rustfs
+        run: docker compose logs valkey rustfs
 
       - name: Stop and remove the services
         if: always()
-        run: |
-          docker stop valkey rustfs
-          docker rm valkey rustfs
+        run: docker compose down -v
 
   build:
     runs-on: ubuntu-latest
@@ -201,7 +153,6 @@ jobs:
       - name: Run Docker image
         run: |
           docker run -d -p 8080:8080 --name ddp \
-            --env-file .env \
             ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
 
       - name: Version check
