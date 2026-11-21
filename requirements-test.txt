@@ -215,10 +215,6 @@ black==26.10.1 \
     --hash=sha256:fe85fc4019bee59bc495c0f2a8ee76c5cd02c7015508d94a967ba2376f39a52c \
     --hash=sha256:ff57f63029aa1353fa8b1b0c8971fd88a6c92dc766608d2eee33ad2deb23270e
     # via -r requirements-test.in
-build==1.6.1 \
-    --hash=sha256:51cc11666391ab6f092070437ac747002ff46f3e4113a3622177ee6b488bfc53 \
-    --hash=sha256:ecd351a4be9d35a9eaaba244a7687143c9c7d4aea6ac964e7e7ddab20cbcf4e7
-    # via pip-tools
 cfgv==3.5.0 \
     --hash=sha256:a8dc6b26ad22ff227d2634a65cb388215ce6cc96bbcc5cfde7641ae87e8dacc0 \
     --hash=sha256:d5b1034354820651caa73ede66a6294d6e95c1b00acc5e9b098e917404669132
@@ -230,7 +226,6 @@ click==8.5.1 \
     #   -c requirements.txt
     #   black
     #   pigar
-    #   pip-tools
 colorama==0.4.6 \
     --hash=sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44 \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
@@ -753,11 +748,8 @@ packaging==26.3 \
     --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
     # via
     #   black
-    #   build
-    #   pip-review
     #   pytest
     #   virtualenv
-    #   wheel
 pathspec==1.1.1 \
     --hash=sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a \
     --hash=sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189
@@ -765,13 +757,6 @@ pathspec==1.1.1 \
 pigar==2.2.0 \
     --hash=sha256:73ba65974dc63e7bb68f81f753642b61d93cbd1aafc2a902aaaaa834a85d07d5 \
     --hash=sha256:870f43fc6da703fd9c62ed1a7f4a81ceb4e0336cce60be4c16bd7c3ebfe9f95b
-    # via -r requirements-test.in
-pip-review==1.3.0 \
-    --hash=sha256:886fc48503a6ec99851036f30a6be07ce7e4610d1491786affecb7a364eddeda
-    # via -r requirements-test.in
-pip-tools==7.7.0 \
-    --hash=sha256:210a8939ee5ad30734731a804a57dae35ba1fe0541175a289798e95948c624b9 \
-    --hash=sha256:4cee2e99ae34b37f81ae4b0947911ad462e41f07fc164e084b8f83af3f1efdad
     # via -r requirements-test.in
 platformdirs==4.14.8 \
     --hash=sha256:1e34af590de4d978631b751eb2202f2fee4497537a17c1720b12fcf57b331392 \
@@ -941,12 +926,6 @@ pylint==4.1.4 \
     --hash=sha256:4c9176dc6c9f1b98b742195f01899b290369d5a27b4b41d1014c17f2f96b26f1 \
     --hash=sha256:b39fcc762ec4a7fe385d01b8e170fd996847297cdc0e3850bdda1435c74cfd95
     # via -r requirements-test.in
-pyproject-hooks==1.3.3 \
-    --hash=sha256:5fc53fdac9f7bd63fbcdc868fb5f90b4784d78a53a3d3388cd738b807441a20b \
-    --hash=sha256:defda19b854fa0d3bd4f76ea4ddcba8abd7dcfcdd585a6690ade050744fc5f43
-    # via
-    #   build
-    #   pip-tools
 pytest==9.2.0 \
     --hash=sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588 \
     --hash=sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b
@@ -1234,10 +1213,6 @@ virtualenv==21.15.11 \
     --hash=sha256:0390c40275487b5e677a1e559e30204ff061db4c5fec39c81d0dff1b24d2b774 \
     --hash=sha256:6ad11e129f546835ae81d47a27f48ed32dcc4e2a0776014a159bab8895cdb9ac
     # via pre-commit
-wheel==0.48.0 \
-    --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab \
-    --hash=sha256:94800765601e9171bf5d58d066e640662842bcedcbab982b2c90787a2c987322
-    # via pip-tools
 yarl==1.25.1 \
     --hash=sha256:0136d640dfa9b0523853e411430a99f8a91eca85774c6420285a33b755bc6de3 \
     --hash=sha256:03dd38de09bc213e9a8b29761eec33ee1d5318dac0e49d8af36e4d27830e23a7 \
@@ -1378,9 +1353,3 @@ yarl==1.25.1 \
     --hash=sha256:f61964f235a43738bfac50da46fc4254943a7eea3051aeb0b6fc7c992c29fadc \
     --hash=sha256:fe01645169a2112aa1d4ebc3e4c5f029c5c8f97adfc32e5d37c993b39a994d75
     # via aiohttp
-
-# WARNING: The following packages were not pinned, but pip requires them to be
-# pinned when the requirements file includes hashes and the requirement is not
-# satisfied by a package already installed. Consider using the --allow-unsafe flag.
-# pip
-# setuptools
