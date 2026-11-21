@@ -100,7 +100,7 @@
 - [ ] Use BuildKit secrets for any build-time credential (`todo.txt` item 5).
 - [ ] Add Trivy image scanning to CI (`todo.txt` item 6).
 - [x] Add a build cache to the CI build step (`todo.txt` item 7). Not needed
-- [ ] Add `docker-compose.yml` with the app, Valkey, and RustFS services. This avoids the root user for local runs (`todo.txt` item 24).
+- [x] Add `docker-compose.yml` with the app, Valkey, and RustFS services. This avoids the root user for local runs (`todo.txt` item 24).
 
 ## G. Code quality and developer setup
 
@@ -110,9 +110,6 @@
 - [ ] Add a pre-commit configuration for black, pylint, and Hadolint (`todo.txt` item 17).
 - [ ] Write the output of pylint and pytest as XML files and upload them as CI artifacts (`todo.txt` item 8).
 - [ ] Check the GitHub Security tab and resolve every alert (`todo.txt` item 15).
-- [ ] Resolve every open review comment (`todo.txt` item 16).
-- [ ] Review `notes.txt` and move anything useful to the README. Then delete the file.
-- [ ] Delete `todo.txt` after every item is complete.
 
 ## H. GitHub Actions CI
 

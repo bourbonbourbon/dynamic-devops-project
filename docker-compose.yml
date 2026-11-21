@@ -47,7 +47,7 @@ services:
       valkey:
         condition: service_healthy
       rustfs:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; test=urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3);print(test.read().decode('utf-8'))"]
       interval: 30s

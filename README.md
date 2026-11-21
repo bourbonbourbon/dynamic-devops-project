@@ -172,6 +172,45 @@ If a variable is not set, the service reads it from the `.env` file in the proje
    curl -s http://localhost:8080/metrics
    ```
 
+### Run with Docker Compose
+
+Docker Compose starts the app, Valkey, and RustFS together. The app runs in its
+container, so you do not need a Python environment on your machine.
+
+1. Create the `.env` file from your own values. Set `S3_SECRET_KEY`. Compose stops
+   with an error if this value is missing.
+
+2. Start the stack:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Check the status. The `app` service must show `healthy` after about one minute:
+
+   ```bash
+   docker compose ps
+   ```
+
+4. Call the endpoints:
+
+   ```bash
+   curl -i http://localhost:8080/version
+   curl -i http://localhost:8080/store
+   ```
+
+5. Stop the stack. The data in RustFS is kept:
+
+   ```bash
+   docker compose down
+   ```
+
+   To delete the stored data too, run `docker compose down -v`.
+
+Inside the Compose network, the app reaches the services by their names, `valkey` and
+`rustfs`. The values in `.env` for `localhost` apply only to runs outside Compose.
+
+
 ## Test and lint
 
 The unit tests mock RustFS and the openSenseMap API.
@@ -339,11 +378,12 @@ Done:
 - [x] Unit tests, pylint, and Hadolint in CI
 - [x] Docker image on GHCR
 - [x] OpenSSF Scorecard and Terrascan workflows
+- [x] Docker Compose for the app, Valkey, and RustFS
+- [x] `/cache` endpoint
+- [x] Integration tests with real Valkey and RustFS
 
 Open:
 
-- [x] `/cache` endpoint
-- [x] Integration tests with real Valkey and RustFS
 - [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
 - [ ] Valkey manifests
 - [ ] Helm chart and Kustomize manifests
