@@ -115,24 +115,24 @@
 
 - [x] Add RustFS in CI
 - [x] Add `permissions: contents: read` at the top of the workflow. Grant write permissions only to the jobs that need them.
-- [ ] Add a `pull_request` trigger so that CI runs before merge.
+- [x] Add a `pull_request` trigger so that CI runs before merge. Not needed
 - [x] Update `actions/setup-python` from `v3` to a current version.
-- [ ] Pin every action to a full commit SHA. The Scorecard check "Pinned-Dependencies" requires this.
+- [x] Pin every action to a full commit SHA. The Scorecard check "Pinned-Dependencies" requires this.
 - [x] Remove the duplicate venv setup from the lint job, or use the venv for all commands.
 - [ ] Remove the hardcoded MinIO or RustFS password from the workflow file.
 - [x] Add the integration test job (checklist item 4.4).
 - [ ] Add SonarQube with the Quality Gate check, or Semgrep (checklist item 4.4). For SonarQube, you must set up a server or use SonarCloud (**decide**).
 - [x] Add a step that checks the Dockerfile with Hadolint.
-- [ ] Keep Terrascan and check that it passes.
+- [x] Keep Terrascan and check that it passes.
 - [ ] Add Trivy scanning to the build job.
-- [ ] Make the build job run only on `main` or on version tags.
+- [x] Make the build job run only on `main` or on version tags.
 - [ ] Prevent the build job from overwriting an existing image tag. Version tags must be immutable.
-- [ ] Fix the version-check job so it fails on a mismatch.
+- [x] Fix the version-check job so it fails on a mismatch.
 - [ ] Review the CI best practices list and check each item (checklist item 4.4).
-- [ ] Add `.github/dependabot.yml` for `pip` and `github-actions`.
+- [x] Add `.github/dependabot.yml` for `pip` and `github-actions`.
 - [ ] Confirm that the Scorecard workflow runs and fix every issue it reports (checklist item 3.4).
 - [ ] Add `SECURITY.md`.
-- [ ] Configure branch protection on `main`. It must require pull requests and passing CI checks, and it must block direct pushes (`todo.txt` item "don't push directly to main").
+- [x] Configure branch protection on `main`. It must require pull requests and passing CI checks, and it must block direct pushes (`todo.txt` item "don't push directly to main").
 
 ## I. Kubernetes core manifests
 
