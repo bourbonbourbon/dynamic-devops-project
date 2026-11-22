@@ -4,7 +4,7 @@
 - [ ] Find the current stable RustFS image tag on Docker Hub and in the RustFS documentation. Write the exact tag down.
 - [x] Replace `minio==7.2.15` in `requirements.txt` with a pinned `boto3` version.
 - [x] Create `requirements-dev.txt` with the test packages.
-- [ ] Create `.env.example` with placeholder values.
+- [x] Create `.env.example` with placeholder values.
 - [x] Add `.env` and `rustfs-data/` to `.gitignore`.
 - [x] Run `git rm --cached .env` so Git stops tracking the file.
 - [ ] Change the MinIO password `CHANGEME123` on every system where it was used.
@@ -23,7 +23,7 @@
 - [x] Commit the move alone.
 - [x] Change the `.env` path in `src/app.py` so it resolves from the file location.
 - [x] Rewrite the Dockerfile so it copies `src/` and runs `./src/app.py`.
-- [ ] Remove `COPY .env` from the Dockerfile.
+- [x] Remove `COPY .env` from the Dockerfile.
 - [x] Remove the commented-out `dev` stage from the Dockerfile, or restore it on purpose.
 - [x] Create `pytest.ini` with `pythonpath = src` and `testpaths = tests`.
 - [x] Remove the `sys.path.append` block from `tests/test_app.py`.
@@ -227,7 +227,7 @@
 
 ## P. Security and Scorecard
 
-- [ ] Remove the committed `.env` and rotate every credential it contained.
+- [x] Remove the committed `.env` and rotate every credential it contained.
 - [ ] Turn on GitHub secret scanning and push protection.
 - [ ] Turn on CodeQL or Semgrep for code scanning.
 - [ ] Confirm that the Scorecard score is acceptable. Fix each failed check.

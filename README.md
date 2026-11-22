@@ -383,13 +383,13 @@ Done:
 - [x] Docker Compose for the app, Valkey, and RustFS
 - [x] `/cache` endpoint
 - [x] Integration tests with real Valkey and RustFS
+- [x] Remove `.env` from the repository and from the image
 
 Open:
 
 - [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
 - [ ] Valkey manifests
 - [ ] Helm chart and Kustomize manifests
-- [ ] Remove `.env` from the repository and from the image
 - [ ] Image scanning (Trivy), SonarQube or Semgrep, Dependabot
 - [ ] Build job only on `main` or on version tags
 - [ ] Terraform for the Kubernetes cluster

@@ -10,7 +10,6 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir --require-hashes -r ./requirements.txt
 
 COPY src/ /app/src/
-COPY .env /app/.env
 
 USER 65534
 
