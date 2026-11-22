@@ -167,7 +167,7 @@ jobs:
 
       - name: Run Docker image
         run: |
-          docker run --init -d -p 8080:8080 --name ddp \
+          docker run --env-file .env --init -d -p 8080:8080 --name ddp \
             ghcr.io/bourbonbourbon/ddp:${{ env.Version }}
 
       - name: Version check

@@ -38,10 +38,14 @@ spec:
               cpu: 500m
           securityContext:
             allowPrivilegeEscalation: false
+            runAsUser: 65534
             readOnlyRootFilesystem: true
+            privileged: false
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
           readinessProbe:
             exec:
               command: ["valkey-cli", "ping"]
