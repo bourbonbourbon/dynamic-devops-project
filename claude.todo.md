@@ -119,7 +119,7 @@
 - [x] Update `actions/setup-python` from `v3` to a current version.
 - [x] Pin every action to a full commit SHA. The Scorecard check "Pinned-Dependencies" requires this.
 - [x] Remove the duplicate venv setup from the lint job, or use the venv for all commands.
-- [ ] Remove the hardcoded MinIO or RustFS password from the workflow file.
+- [x] Remove the hardcoded MinIO or RustFS password from the workflow file.
 - [x] Add the integration test job (checklist item 4.4).
 - [ ] Add SonarQube with the Quality Gate check, or Semgrep (checklist item 4.4). For SonarQube, you must set up a server or use SonarCloud (**decide**).
 - [x] Add a step that checks the Dockerfile with Hadolint.
@@ -130,27 +130,27 @@
 - [x] Fix the version-check job so it fails on a mismatch.
 - [ ] Review the CI best practices list and check each item (checklist item 4.4).
 - [x] Add `.github/dependabot.yml` for `pip` and `github-actions`.
-- [ ] Confirm that the Scorecard workflow runs and fix every issue it reports (checklist item 3.4).
+- [x] Confirm that the Scorecard workflow runs and fix every issue it reports (checklist item 3.4).
 - [x] Add `SECURITY.md`.
 - [x] Configure branch protection on `main`. It must require pull requests and passing CI checks, and it must block direct pushes (`todo.txt` item "don't push directly to main").
 
 ## I. Kubernetes core manifests
 
-- [ ] Create a KIND configuration file with ingress-nginx support (checklist item 4.3). Confirm that the file is committed.
-- [ ] Create a local KIND cluster and install ingress-nginx.
-- [ ] Replace the `Pod` in `k8s/deploy-app.yml` with a `Deployment`.
+- [x] Create a KIND configuration file with ingress-nginx support (checklist item 4.3). Confirm that the file is committed.
+- [x] Create a local KIND cluster and install ingress-nginx.
+- [x] Replace the `Pod` in `k8s/deploy-app.yml` with a `Deployment`.
 - [x] Update the image tag from `0.2.1` to the current version.
-- [ ] Add `readinessProbe` for `/readyz`.
-- [ ] Add `livenessProbe` for `/version`.
-- [ ] Add environment variables for the endpoint, bucket, and object names.
-- [ ] Read the RustFS keys from a Kubernetes Secret.
-- [ ] Raise the memory limit. 64 Mi is too low for this stack.
-- [ ] Add `capabilities: drop: ["ALL"]` to the container security context.
-- [ ] Add `seccompProfile: RuntimeDefault`.
+- [x] Add `readinessProbe` for `/readyz`.
+- [x] Add `livenessProbe` for `/version`.
+- [x] Add environment variables for the endpoint, bucket, and object names.
+- [x] Read the RustFS keys from a Kubernetes Secret.
+- [x] Raise the memory limit. 64 Mi is too low for this stack.
+- [x] Add `capabilities: drop: ["ALL"]` to the container security context.
+- [x] Add `seccompProfile: RuntimeDefault`.
 - [ ] Test whether `readOnlyRootFilesystem` works with waitress. Add writable volumes for any path that the app writes to.
 - [ ] Add `ingressClassName: nginx` to the Ingress.
-- [ ] Add the RustFS manifests.
-- [ ] Add the Valkey manifests (Deployment, Service).
+- [x] Add the RustFS manifests.
+- [x] Add the Valkey manifests (Deployment, Service).
 - [ ] Add `PersistentVolumeClaim` objects for stateful services.
 - [ ] Run Terrascan on the Kubernetes folder and fix all findings.
 - [ ] Review Kubernetes security best practices (checklist item 5.3).

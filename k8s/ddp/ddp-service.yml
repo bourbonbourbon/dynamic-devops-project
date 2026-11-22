@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ddp-service
+  namespace: ddp
+spec:
+  type: LoadBalancer
+  selector:
+    app: ddp
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
