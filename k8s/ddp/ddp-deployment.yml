@@ -17,10 +17,10 @@ spec:
       initContainers:
       - name: init-valkey
         image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-        command: [ 'sh', '-c', "until nslookup valkey-service; do echo waiting for valkey-service; sleep 2; done" ]
+        command: [ 'sh', '-c', "until nc -z valkey-service.ddp.svc.cluster.local 6379; do echo waiting for valkey-service; sleep 2; done" ]
       - name: init-rustfs
         image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-        command: [ 'sh', '-c', "until nslookup rustfs-service; do echo waiting for rustfs-service; sleep 2; done" ]
+        command: [ 'sh', '-c', "until wget -q -O /dev/null http://rustfs-service.ddp.svc.cluster.local:9000/health; do echo waiting for rustfs-service; sleep 2; done" ]
       containers:
       - name: ddp
         image: ghcr.io/bourbonbourbon/ddp:0.4.3@sha256:77d9845c8b864a3939059dea03ee04c776b6c9ef80115a3c22f3c98c83222592

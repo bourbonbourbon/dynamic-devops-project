@@ -4,6 +4,7 @@ metadata:
   name: valkey-service
   namespace: ddp
 spec:
+  type: ClusterIP
   selector:
     app: valkey
   ports:

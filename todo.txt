@@ -39,3 +39,5 @@ docker image do not build with .env file done?
 pin versions in docker compose and manifests
 benchmarks
 sealed secrets
+add helm of rustfs and valkey
+automate version upgrade

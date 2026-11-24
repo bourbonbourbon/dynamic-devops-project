@@ -4,6 +4,7 @@ metadata:
   name: rustfs-service
   namespace: ddp
 spec:
+  type: ClusterIP
   selector:
     app: rustfs
   ports:
