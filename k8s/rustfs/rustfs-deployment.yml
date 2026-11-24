@@ -26,8 +26,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: rustfs
-          image: rustfs/rustfs:latest
-          imagePullPolicy: Always
+          image: rustfs/rustfs:latest@sha256:ee717072290bec9b11abfc0365f8310b00df1cd9b3639943edae47bdef05044a
+          imagePullPolicy: IfNotPresent
           ports:
             - name: s3
               containerPort: 9000
@@ -47,11 +47,16 @@ spec:
               memory: 512Mi
               cpu: 500m
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            privileged: false
             capabilities:
               drop:
                 - ALL
+            seccompProfile:
+              type: RuntimeDefault
           readinessProbe:
             tcpSocket:
               port: 9000

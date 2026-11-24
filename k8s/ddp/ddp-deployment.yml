@@ -15,85 +15,127 @@ spec:
     spec:
       automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: false
+        runAsNonRoot: true
         runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+        - name: rustfs-credentials
+          secret:
+            secretName: rustfs-credentials
+            defaultMode: 0440
       initContainers:
-      - name: init-valkey
-        image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-        imagePullPolicy: Always
-        command: [ 'sh', '-c', "until nc -z valkey-service.ddp.svc.cluster.local 6379; do echo waiting for valkey-service; sleep 2; done" ]
-      - name: init-rustfs
-        image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-        imagePullPolicy: Always
-        command: [ 'sh', '-c', "until wget -q -O /dev/null http://rustfs-service.ddp.svc.cluster.local:9000/health; do echo waiting for rustfs-service; sleep 2; done" ]
+        - name: init-valkey
+          image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', "until nc -z valkey-service.ddp.svc.cluster.local 6379; do echo waiting for valkey-service; sleep 2; done"]
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+              cpu: 50m
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+        - name: init-rustfs
+          image: busybox:1.38@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c', "until wget -q -O /dev/null http://rustfs-service.ddp.svc.cluster.local:9000/health; do echo waiting for rustfs-service; sleep 2; done"]
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+              cpu: 50m
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
       containers:
-      - name: ddp
-        image: ghcr.io/bourbonbourbon/ddp:0.4.3@sha256:77d9845c8b864a3939059dea03ee04c776b6c9ef80115a3c22f3c98c83222592
-        imagePullPolicy: IfNotPresent
-        ports:
-          - containerPort: 8080
-            name: http
-        resources:
-          requests:
-            memory: 64Mi
-            cpu: 500m
-          limits:
-            memory: 128Mi
-            cpu: 1000m
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsUser: 65534
-          readOnlyRootFilesystem: true
-          privileged: false
-          capabilities:
-            drop:
-              - ALL
-          seccompProfile:
-            type: RuntimeDefault
-        env:
-          - name: PORT
-            value: "8080"
-          - name: HOST
-            value: "0.0.0.0"
-          - name: SENSEBOXES
-            value: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
-          - name: S3_ENDPOINT_URL
-            value: "http://rustfs-service:9000"
-          - name: S3_BUCKET
-            value: "avg-temp"
-          - name: S3_OBJECT
-            value: "avg-temp"
-          - name: S3_REGION
-            value: "us-east-1"
-          - name: S3_ACCESS_KEY
-            valueFrom:
-              secretKeyRef:
-                name: rustfs-credentials
-                key: RUSTFS_ACCESS_KEY
-          - name: S3_SECRET_KEY
-            valueFrom:
-              secretKeyRef:
-                name: rustfs-credentials
-                key: RUSTFS_SECRET_KEY
-          - name: VKURL
-            value: "valkey-service"
-          - name: VKPORT
-            value: "6379"
-        livenessProbe:
-          exec:
-            command:
-            - python3
-            - -c
-            - "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/version', timeout=3); print(response.read().decode('utf-8'))"
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        readinessProbe:
-          exec:
-            command:
-            - python3
-            - -c
-            - "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3); print(response.read().decode('utf-8'))"
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: ddp
+          image: ghcr.io/bourbonbourbon/ddp:0.4.3@sha256:77d9845c8b864a3939059dea03ee04c776b6c9ef80115a3c22f3c98c83222592
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 500m
+            limits:
+              memory: 128Mi
+              cpu: 1000m
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: SENSEBOXES
+              value: "5eba5fbad46fb8001b799786,5a77184229b729001a150c10,6448d061258367000707ec8b,5e5fc72957703e001b7b1f0a,5eb3d2ea9724e9001ce71aa9,5f70d5b9a98020001bbd2c89"
+            - name: S3_ENDPOINT_URL
+              value: "http://rustfs-service:9000"
+            - name: S3_BUCKET
+              value: "avg-temp"
+            - name: S3_OBJECT
+              value: "avg-temp"
+            - name: S3_REGION
+              value: "us-east-1"
+            - name: S3_ACCESS_KEY_FILE
+              value: /run/secrets/rustfs/RUSTFS_ACCESS_KEY
+            - name: S3_SECRET_KEY_FILE
+              value: /run/secrets/rustfs/RUSTFS_SECRET_KEY
+            - name: VKURL
+              value: "valkey-service"
+            - name: VKPORT
+              value: "6379"
+          volumeMounts:
+            - name: rustfs-credentials
+              mountPath: /run/secrets/rustfs
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - python3
+                - -c
+                - "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/version', timeout=3); print(response.read().decode('utf-8'))"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - python3
+                - -c
+                - "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3); print(response.read().decode('utf-8'))"
+            initialDelaySeconds: 5
+            periodSeconds: 5

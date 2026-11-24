@@ -2,7 +2,7 @@ name: ddp
 
 services:
   valkey:
-    image: valkey/valkey:latest
+    image: valkey/valkey:latest@sha256:1c2b25b09f354c66fe994733acdf12fcfd4bdf6f3bd92b88a93a70378d884056
     ports:
       - "6379:6379"
     healthcheck:
@@ -12,7 +12,7 @@ services:
       retries: 10
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest@sha256:ee717072290bec9b11abfc0365f8310b00df1cd9b3639943edae47bdef05044a
     environment:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
       RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}

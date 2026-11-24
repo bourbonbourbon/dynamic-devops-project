@@ -19,14 +19,15 @@ spec:
     spec:
       automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: false
+        runAsNonRoot: true
         runAsUser: 65534
+        fsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: valkey
-          image: valkey/valkey:latest
-          imagePullPolicy: Always
+          image: valkey/valkey:latest@sha256:1c2b25b09f354c66fe994733acdf12fcfd4bdf6f3bd92b88a93a70378d884056
+          imagePullPolicy: IfNotPresent
           ports:
             - name: valkey
               containerPort: 6379
@@ -38,8 +39,9 @@ spec:
               memory: 128Mi
               cpu: 500m
           securityContext:
-            allowPrivilegeEscalation: false
+            runAsNonRoot: true
             runAsUser: 65534
+            allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             privileged: false
             capabilities:
