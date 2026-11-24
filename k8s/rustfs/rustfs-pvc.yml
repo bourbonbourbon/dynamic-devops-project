@@ -4,6 +4,7 @@ metadata:
   name: rustfs-data
   namespace: ddp
 spec:
+  storageClassName: manual
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
