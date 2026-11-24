@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir --require-hashes -r ./requirements.txt
 
 COPY src/ /app/src/
 
+RUN apk add --no-cache tini=0.19.0-r3
+ENTRYPOINT ["/sbin/tini", "--"]
+
 USER 65534
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

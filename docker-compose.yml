@@ -34,7 +34,6 @@ services:
       context: .
       target: prod
     image: ddp:local
-    init: true
     env_file:
       - .env
     environment:
