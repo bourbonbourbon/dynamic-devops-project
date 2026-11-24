@@ -147,11 +147,11 @@
 - [x] Raise the memory limit. 64 Mi is too low for this stack.
 - [x] Add `capabilities: drop: ["ALL"]` to the container security context.
 - [x] Add `seccompProfile: RuntimeDefault`.
-- [ ] Test whether `readOnlyRootFilesystem` works with waitress. Add writable volumes for any path that the app writes to.
+- [x] Test whether `readOnlyRootFilesystem` works with waitress. Add writable volumes for any path that the app writes to.
 - [ ] Add `ingressClassName: nginx` to the Ingress.
 - [x] Add the RustFS manifests.
 - [x] Add the Valkey manifests (Deployment, Service).
-- [ ] Add `PersistentVolumeClaim` objects for stateful services.
+- [x] Add `PersistentVolumeClaim` objects for stateful services.
 - [ ] Run Terrascan on the Kubernetes folder and fix all findings.
 - [ ] Review Kubernetes security best practices (checklist item 5.3).
 - [ ] Add `NetworkPolicy` objects (optional, but recommended).
