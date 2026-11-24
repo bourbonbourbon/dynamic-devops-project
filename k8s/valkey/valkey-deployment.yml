@@ -26,6 +26,7 @@ spec:
       containers:
         - name: valkey
           image: valkey/valkey:latest
+          imagePullPolicy: Always
           ports:
             - name: valkey
               containerPort: 6379

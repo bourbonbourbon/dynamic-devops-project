@@ -27,6 +27,7 @@ spec:
       containers:
         - name: rustfs
           image: rustfs/rustfs:latest
+          imagePullPolicy: Always
           ports:
             - name: s3
               containerPort: 9000
