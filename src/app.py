@@ -58,6 +58,15 @@ config = {
     **os.environ,
 }
 
+
+def read_secret(name: str) -> str:
+    """Return the secret from NAME_FILE if set, otherwise from NAME."""
+    file_var = config.get(f"{name}_FILE")
+    if file_var:
+        return Path(file_var).read_text(encoding="utf-8").strip()
+    return config[name]
+
+
 senseBoxes = config["SENSEBOXES"].split(sep=",")
 
 app = Flask(import_name=__name__)
@@ -68,8 +77,8 @@ object_name = config["S3_OBJECT"]
 s3_client = boto3.client(
     service_name="s3",
     endpoint_url=config["S3_ENDPOINT_URL"],
-    aws_access_key_id=config["S3_ACCESS_KEY"],
-    aws_secret_access_key=config["S3_SECRET_KEY"],
+    aws_access_key_id=read_secret("S3_ACCESS_KEY"),
+    aws_secret_access_key=read_secret("S3_SECRET_KEY"),
     region_name=config.get("S3_REGION", "us-east-1"),
     config=Config(
         s3={"addressing_style": "path"},

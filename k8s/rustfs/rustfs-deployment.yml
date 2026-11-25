@@ -5,6 +5,8 @@ metadata:
   namespace: ddp
   labels:
     app: rustfs
+  annotations:
+    checkov.io/skip1: CKV_K8S_35=RustFS reads root credentials only from environment variables; no file-based option available
 spec:
   replicas: 1
   strategy:
