@@ -16,7 +16,7 @@ The service reads temperature data from [openSenseMap](https://opensensemap.org)
 senseBoxes. It calculates the average temperature and gives it a status:
 `Too Cold`, `Good`, or `Too Hot`.
 
-Current version: `0.4.3` (see `src/version.py`).
+Current version: `0.4.4` (see `src/version.py`).
 
 ## How it works
 

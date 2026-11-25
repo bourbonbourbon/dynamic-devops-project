@@ -68,7 +68,7 @@ spec:
               type: RuntimeDefault
       containers:
         - name: ddp
-          image: ghcr.io/bourbonbourbon/ddp:0.4.3@sha256:77d9845c8b864a3939059dea03ee04c776b6c9ef80115a3c22f3c98c83222592
+          image: ghcr.io/bourbonbourbon/ddp:0.4.4
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
