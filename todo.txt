@@ -43,3 +43,4 @@ automate version upgrade
 check terrascan logs
 replace terrascan with checkov
 fix pv, pvc on k8s
+try kube-hunter

@@ -152,9 +152,9 @@
 - [x] Add the RustFS manifests.
 - [x] Add the Valkey manifests (Deployment, Service).
 - [x] Add `PersistentVolumeClaim` objects for stateful services.
-- [ ] Run Terrascan on the Kubernetes folder and fix all findings.
-- [ ] Review Kubernetes security best practices (checklist item 5.3).
-- [ ] Add `NetworkPolicy` objects (optional, but recommended).
+- [x] Run Terrascan on the Kubernetes folder and fix all findings.
+- [x] Review Kubernetes security best practices (checklist item 5.3).
+- [x] Add `NetworkPolicy` objects (optional, but recommended).
 
 ## J. Helm and Kustomize
 
