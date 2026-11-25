@@ -60,6 +60,9 @@ jobs:
       - name: Run pytest with coverage
         run: pytest --cov --cov-report=term-missing --cov-report=xml
       
+      # Writes the coverage table to the job summary only.
+      # The threshold (fail_under in .coveragerc) is enforced by the pytest step.
+      # --fail-under=0 means this step never fails because of the threshold.
       - name: Add coverage report to the job summary
         if: always()
         run: coverage report --format=markdown --fail-under=0 >> "$GITHUB_STEP_SUMMARY"

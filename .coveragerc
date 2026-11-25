@@ -7,4 +7,9 @@ show_missing = True
 exclude_lines =
     pragma: no cover
     if __name__ == .__main__.:
+
+# Minimum total coverage in percent.
+# The pytest step (pytest --cov) fails the job when coverage is below this value.
+# The CI summary step uses --fail-under=0 on purpose. It only writes the report
+# to the job summary, so the threshold is not checked a second time.
 fail_under = 90
