@@ -8,7 +8,11 @@ resources:
   - rustfs/rustfs-pvc.yml
   - rustfs/rustfs-deployment.yml
   - rustfs/rustfs-service.yml
+  - rustfs/rustfs-networkpolicy.yml
   - valkey/valkey-deployment.yml
   - valkey/valkey-service.yml
+  - valkey/valkey-networkpolicy.yml
+  - ddp/ddp-configmap.yml
   - ddp/ddp-deployment.yml
   - ddp/ddp-service.yml
+  - ddp/ddp-networkpolicy.yml

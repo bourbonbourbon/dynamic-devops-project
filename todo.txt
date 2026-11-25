@@ -41,4 +41,4 @@ sealed secrets
 add helm of rustfs and valkey
 automate version upgrade
 check terrascan logs
-replace terrascan
+replace terrascan with checkov

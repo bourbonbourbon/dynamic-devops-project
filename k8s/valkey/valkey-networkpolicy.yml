@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: valkey-allow-from-ddp
+  namespace: ddp
+spec:
+  podSelector:
+    matchLabels:
+      app: valkey
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: ddp
+      ports:
+        - protocol: TCP
+          port: 6379
