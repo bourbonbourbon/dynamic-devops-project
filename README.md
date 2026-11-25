@@ -154,14 +154,14 @@ All variables are required except `S3_REGION`. The service fails at startup when
    [Docker Hub](https://hub.docker.com/r/rustfs/rustfs) in place of `<rustfs-tag>`:
 
    ```bash
-   docker run -d --name rustfs -p 9000:9000 -p 9001:9001 \
+   docker run -d --name rustfs -p 9000:9000 \
      -e RUSTFS_ACCESS_KEY=ROOTUSER \
      -e RUSTFS_SECRET_KEY=<your-secret> \
      -v "$(pwd)/rustfs-data:/data" \
      rustfs/rustfs:<rustfs-tag>
    ```
 
-   Port `9000` is the S3 API. Port `9001` is the web console.
+   Port `9000` is the S3 API.
    Make sure the values in `.env` match the keys that you set here.
 
 5. Start the application:
