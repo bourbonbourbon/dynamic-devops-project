@@ -263,12 +263,53 @@
 - [ ] Confirm that Grafana shows the metrics and logs.
 - [ ] Record the final state in the README.
 
-## Suggested order
+## Cloud and infrastructure
 
-1. Sections A, B, and C (remove MinIO, move the code, and fix the bugs).
-2. Sections D and E (spec and tests).
-3. Sections F, G, and H (Docker, code quality, and CI).
-4. Sections I and J (Kubernetes and Helm).
-5. Sections K and L (Terraform and observability).
-6. Sections M and N (end-to-end tests and CD).
-7. Sections O, P, Q, and R (Phase 6, security, documentation, and release).
+- [ ] Create an AWS user for the project
+- [ ] Create an OpenShift cluster for IaC
+- [ ] Add Terraform for the Kubernetes cluster
+- [ ] Decide whether to use Terraform or OpenTofu
+- [ ] Add Helm charts for RustFS and Valkey
+- [ ] Use Sealed Secrets for Kubernetes secrets
+- [ ] Fix the PersistentVolume and PersistentVolumeClaim setup in Kubernetes
+
+## Containers and images
+
+- [ ] Use digests wherever applicable
+- [ ] Pin versions in Docker Compose and Kubernetes manifests
+- [ ] Use a build cache in CI
+- [ ] Add Trivy image scanning
+- [ ] Evaluate Katacontainers for stronger workload isolation
+
+## Security scanning
+
+- [ ] Check the GitHub Security tab and resolve all alerts
+- [ ] Replace Terrascan with Checkov
+- [ ] Check the Terrascan logs
+- [ ] Run kube-hunter against the cluster
+- [ ] Add Semgrep or SonarQube for code scanning
+- [ ] Use the SonarQube Quality Gate check
+
+## CI and CD
+
+- [ ] Write the output of lint and unit tests as XML and upload it as CI artifacts
+- [ ] Create a GitHub Actions workflow for CD
+- [ ] Automate version upgrades
+- [ ] Automatically upgrade dependencies and versions
+- [ ] Follow CI best practices and review each item
+- [ ] Do not push directly to `main`
+
+## Testing and quality
+
+- [ ] Write documentation on how to test the application
+- [ ] Add more integration tests
+- [ ] Add benchmarks
+
+## Developer experience
+
+- [ ] Create a `.vscode` folder with recommended extensions
+- [ ] Decide whether to run a SonarQube server or use Terraform for it
+
+## Storage
+
+- [ ] Replace RustFS with a version that has no GUI or web app
