@@ -20,7 +20,7 @@ Current version: `0.4.4` (see `src/version.py`).
 
 ## How it works
 
-1. A background thread runs every 300 seconds (one cycle).
+1. A background thread runs one refresh cycle every 300 seconds.
 2. The thread requests the data of each senseBox from the openSenseMap API.
 3. The service uses only a temperature sensor that:
    - has the icon `osem-thermometer`
@@ -49,12 +49,12 @@ The service rounds the average first. Then it selects the status.
 
 | Endpoint | Description | Success | Failure |
 |---|---|---|---|
-| `GET /version` | Returns the application version. | `200` `{"version": "0.4.0"}` | - |
+| `GET /version` | Returns the application version. | `200` `{"version": "0.4.4"}` | - |
 | `GET /temperature` | Returns the average temperature from the cache. On a cache miss, it fetches new data. | `200` `{"avg_temp": 14.98, "status": "Good"}` | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
 | `GET /store` | Fetches new data and writes it to RustFS and to the cache. | `200` (same body as `/temperature`) | `503` `{"error": "object storage unavailable"}` when the RustFS write fails. |
+| `GET /cache` | Fetches new data and writes it to the Valkey cache only. Does not use RustFS. | `200` (same body as `/temperature`) | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
 | `GET /readyz` | Readiness check. | `200` | `503` when a check fails. |
 | `GET /metrics` | Prometheus metrics. | `200` | - |
-| `GET /cache` | Fetches new data and writes it to the Valkey cache only. Does not use RustFS. | `200` (same body as `/temperature`) | `500` when no senseBox gives a reading. `503` when Valkey is not available. |
 
 ### Readiness (`/readyz`)
 
@@ -89,10 +89,10 @@ The service exports the default Python metrics and these custom metrics:
 | `version_requests_total` | counter | Number of `/version` requests. |
 | `temp_requests_total` | counter | Number of `/temperature` requests (cache hits and misses). |
 | `store_requests_total` | counter | Number of `/store` requests. |
+| `cache_requests_total` | counter | Number of `/cache` requests. |
 | `cache_last_refresh_timestamp_seconds` | gauge | Unix time of the last successful cache write. |
 | `store_last_write_timestamp_seconds` | gauge | Unix time of the last successful RustFS write. |
 | `failed_sensebox_count` | gauge | Number of failed senseBoxes in the last refresh. |
-| `cache_requests_total` | counter | Number of `/cache` requests. |
 
 Prometheus calculates the age at query time:
 
@@ -102,7 +102,8 @@ Prometheus calculates the age at query time:
 ## Configuration
 
 The service reads its settings from environment variables.
-If a variable is not set, the service reads it from the `.env` file in the project root.
+Environment variables take precedence over the `.env` file in the project root.
+Kubernetes and CI pass their values as environment variables.
 
 | Variable | Description | Example |
 |---|---|---|
@@ -110,17 +111,19 @@ If a variable is not set, the service reads it from the `.env` file in the proje
 | `HOST` | Address of the web server. | `0.0.0.0` |
 | `SENSEBOXES` | senseBox IDs, separated by commas. | `5eba5fbad46fb8001b799786,5a77184229b729001a150c10` |
 | `S3_ENDPOINT_URL` | URL of the S3-compatible storage (RustFS). | `http://localhost:9000` |
-| `S3_ACCESS_KEY` | Access key of the storage. | `ROOTUSER` |
-| `S3_SECRET_KEY` | Secret key of the storage. | (set your own value) |
+| `S3_ACCESS_KEY` | Access key of the storage. You can also set `S3_ACCESS_KEY_FILE` to a file path. | `ROOTUSER` |
+| `S3_SECRET_KEY` | Secret key of the storage. You can also set `S3_SECRET_KEY_FILE` to a file path. | (set your own value) |
 | `S3_BUCKET` | Bucket name. The service creates the bucket if it does not exist. | `avg-temp` |
 | `S3_OBJECT` | Object name in the bucket. | `avg-temp` |
 | `S3_REGION` | Region name for the S3 client. Optional. Default: `us-east-1`. | `us-east-1` |
 | `VKURL` | Host name of Valkey. | `localhost` |
 | `VKPORT` | Port of Valkey. | `6379` |
 
-> **Warning:** The `.env` file is in the repository and the Dockerfile copies it
-> into the image. Use only placeholder values in this file. Do not use real secrets.
-> This will change when the configuration moves to Kubernetes Secrets.
+All variables are required except `S3_REGION`. The service fails at startup when a required variable is missing.
+
+> **Warning:** Do not commit the `.env` file. It is listed in `.gitignore` and `.dockerignore`.
+> Use placeholder values in `.env.example`. Use real secrets only in your local `.env`,
+> in CI secrets, or in Kubernetes Secrets.
 
 ## Requirements
 
@@ -138,13 +141,16 @@ If a variable is not set, the service reads it from the `.env` file in the proje
    pip install --require-hashes -r requirements-test.txt
    ```
 
-2. Start Valkey:
+2. Create a `.env` file from `.env.example`. Set `VKURL=localhost` and
+   `S3_ENDPOINT_URL=http://localhost:9000`. Set your own `S3_SECRET_KEY`.
+
+3. Start Valkey:
 
    ```bash
    docker run -d --name valkey -p 6379:6379 valkey/valkey:latest
    ```
 
-3. Start RustFS. Use a pinned tag from
+4. Start RustFS. Use a pinned tag from
    [Docker Hub](https://hub.docker.com/r/rustfs/rustfs) in place of `<rustfs-tag>`:
 
    ```bash
@@ -157,15 +163,14 @@ If a variable is not set, the service reads it from the `.env` file in the proje
 
    Port `9000` is the S3 API. Port `9001` is the web console.
    Make sure the values in `.env` match the keys that you set here.
-   Check the RustFS documentation for the variable names of your tag.
 
-4. Start the application:
+5. Start the application:
 
    ```bash
    python src/app.py
    ```
 
-5. Test the endpoints:
+6. Test the endpoints:
 
    ```bash
    curl -i http://localhost:8080/version
@@ -174,13 +179,13 @@ If a variable is not set, the service reads it from the `.env` file in the proje
    curl -s http://localhost:8080/metrics
    ```
 
-### Run with Docker Compose
+## Run with Docker Compose
 
 Docker Compose starts the app, Valkey, and RustFS together. The app runs in its
 container, so you do not need a Python environment on your machine.
 
-1. Create the `.env` file from your own values. Set `S3_SECRET_KEY`. Compose stops
-   with an error if this value is missing.
+1. Create the `.env` file from `.env.example`. Set `S3_ACCESS_KEY` and `S3_SECRET_KEY`.
+   Compose stops with an error if these values are missing.
 
 2. Start the stack:
 
@@ -212,62 +217,59 @@ container, so you do not need a Python environment on your machine.
 Inside the Compose network, the app reaches the services by their names, `valkey` and
 `rustfs`. The values in `.env` for `localhost` apply only to runs outside Compose.
 
+## Tests
 
-## Test and lint
+The tests use `pytest`. The settings are in `pytest.ini`.
+By default, `pytest.ini` skips the integration tests (`-m "not integration"`).
 
-The unit tests mock RustFS and the openSenseMap API.
-The unit tests use a real Valkey server on `localhost:6379`.
-Start Valkey before you run the tests (see step 2 above).
+The tests need the same environment variables as the application. Create `.env` first
+(see Run locally, step 2). `src/app.py` reads its configuration when it is imported.
 
-Run the tests with a coverage report:
+### Unit tests
+
+The unit tests in `tests/test_app.py` and `tests/test_*.py` mock RustFS and the openSenseMap API.
+They use a real Valkey server on `localhost:6379`. Start Valkey before you run them.
+
+> **Warning:** The unit tests run `FLUSHDB` on Valkey before each test. They delete all keys
+> in database 0. Use a disposable Valkey container.
+
+Run the unit tests with a coverage report:
 
 ```bash
 pytest --cov --cov-report=term-missing
 ```
-
-CI fails when the total coverage is below the value `fail_under` in `.coveragerc`.
-
-Run the linter:
-
-```bash
-pylint --fail-under=9 src tests
-```
-
-The file `pytest.ini` sets the import path for pytest.
-The file `.pylintrc` sets the import path for pylint.
 
 ### Integration tests
 
 The integration tests are in `tests/integration/`. They use real Valkey and RustFS
 containers. They mock only the openSenseMap API.
 
-A normal `pytest` run skips them. Run them with the marker:
+Run them with the marker:
 
 ```bash
 pytest -m integration -v
 ```
 
-> **Warning:** The tests delete all keys in Valkey database 0. They also delete the
-> stored object in the bucket. Use disposable containers only. Set `S3_BUCKET` to a
+> **Warning:** The integration tests delete all keys in Valkey database 0. They also delete
+> the stored object in the bucket. They use `S3_BUCKET` for the stored object and create
+> temporary buckets with random names. Use disposable containers only. Set `S3_BUCKET` to a
 > test bucket name when you run them on your own machine.
 
 CI runs the integration tests in the job `integration-tests`.
 
-## Tools
+### Coverage
 
-| Tool | Use | Command |
-|---|---|---|
-| [black](https://github.com/psf/black) | Formats the Python code. | `black src tests` |
-| [isort](https://pycqa.github.io/isort/) | Sorts the imports. | `isort src tests` |
-| [pylint](https://pylint.readthedocs.io) | Checks the code. CI fails below a score of 9. The settings are in `.pylintrc`. | `pylint --fail-under=9 src tests` |
-| [pigar](https://github.com/damnever/pigar) | Generates `requirements.txt` from the imports in the code. | `pigar generate` |
-| [pytest](https://docs.pytest.org) | Runs the tests. The settings are in `pytest.ini`. | `pytest` |
-| pytest-cov | Measures the test coverage. The settings are in `.coveragerc`. | `pytest --cov` |
-| [Hadolint](https://github.com/hadolint/hadolint) | Checks the Dockerfile. | `docker run --rm -i hadolint/hadolint < Dockerfile` |
-| [Terrascan](https://github.com/tenable/terrascan) | Scans the Kubernetes manifests in `k8s/`. CI only. | - |
-| [OpenSSF Scorecard](https://github.com/ossf/scorecard) | Checks the security practices of the repository. CI only. | - |
-| Docker, KIND, kubectl | Run the containers and the local Kubernetes cluster. | - |
-| [pip-tools](https://github.com/jazzband/pip-tools) | Creates the lock files with hashes from `requirements.in` and `requirements-dev.in`. | `pip-compile --generate-hashes --output-file=requirements.txt requirements.in` |
+The minimum total coverage is 90 percent. The value is `fail_under` in `.coveragerc`.
+The pytest step fails when coverage is below this value. The CI summary step writes
+the report to the job summary and does not check the threshold.
+
+### Lint and format
+
+Run the linter. CI fails below a score of 9. The settings are in `.pylintrc`:
+
+```bash
+PYTHONPATH=src pylint --fail-under=9 src tests
+```
 
 Format the code before you commit:
 
@@ -278,10 +280,11 @@ black src tests
 
 The file `.isort.cfg` sets `profile = black`. With this setting, isort and black do not change each other's output.
 
-The file `requirements.txt` contains the packages that the application needs.
-The file `requirements-test.txt` contains the packages for tests and linting.
-Check `requirements.txt` after you run pigar. Pigar can add test packages to the file.
+Check the Dockerfile with Hadolint:
 
+```bash
+docker run --rm -i hadolint/hadolint < Dockerfile
+```
 
 ## Docker
 
@@ -298,7 +301,8 @@ docker run -d -p 8080:8080 --name ddp ddp:test
 curl -s http://localhost:8080/version
 ```
 
-The container runs as the user `nobody`.
+The container runs as the user `nobody` (UID 65534). It uses `tini` as the init process.
+The image does not contain the `.env` file.
 The container must reach Valkey and RustFS at the addresses in `.env`.
 Use a Docker network, or set the variables with `-e`, when you run all
 three containers on one host.
@@ -307,98 +311,163 @@ CI pushes the image to `ghcr.io/bourbonbourbon/ddp:<version>`.
 
 ## Kubernetes
 
-The folder `k8s/` contains these files:
+The folder `k8s/` contains the manifests. `k8s/kustomization.yml` lists all resources.
 
-| File | Content |
+| Path | Content |
 |---|---|
-| `kind.yaml` | Configuration of the local KIND cluster. |
-| `deploy-app.yml` | Pod, Service, and Ingress of the application. |
-| `rustfs.yml` | PersistentVolumeClaim, Deployment, and Service of RustFS. |
+| `kind.yaml` (repository root) | Configuration of the local KIND cluster. Maps ports 80 and 443 to the host. |
+| `k8s/ddp-namespace.yml` | Namespace `ddp`. |
+| `k8s/ddp-secrets.yml` | Secret `rustfs-credentials` for local tests. See the warning below. |
+| `k8s/ddp/` | ConfigMap, Deployment, Service, and NetworkPolicy of the application. |
+| `k8s/rustfs/` | PersistentVolume, PersistentVolumeClaim, Deployment, Service, and NetworkPolicy of RustFS. |
+| `k8s/valkey/` | Deployment, Service, and NetworkPolicy of Valkey. |
 
-Create the Secret for RustFS first. Do not put the values in a file in Git:
+The NetworkPolicies allow only these paths:
 
-```bash
-kubectl create secret generic rustfs-credentials \
-  --from-literal=RUSTFS_ACCESS_KEY=ROOTUSER \
-  --from-literal=RUSTFS_SECRET_KEY='<your-secret>'
-```
+- Ingress to the application on port `8080`.
+- The application to Valkey on port `6379`.
+- The application to RustFS on port `9000`.
+- The application to DNS and to public addresses on port `443`.
 
-Then apply the manifests:
+### Local KIND setup
 
-```bash
-kubectl apply -f k8s/rustfs.yml
-kubectl apply -f k8s/deploy-app.yml
-```
+1. Create the cluster:
 
-Before you apply `rustfs.yml`, replace `<rustfs-tag>` with a pinned image tag.
+   ```bash
+   kind create cluster --config kind.yaml
+   ```
 
-The application expects a Valkey service with the name `valkey-service`.
-The repository does not have the Valkey manifests yet.
+2. Remove `ddp-secrets.yml` from `k8s/kustomization.yml`. Then create the Secret yourself.
+   Use your own values:
+
+   ```bash
+   kubectl create namespace ddp
+   kubectl -n ddp create secret generic rustfs-credentials \
+     --from-literal=RUSTFS_ACCESS_KEY=ROOTUSER \
+     --from-literal=RUSTFS_SECRET_KEY='<your-secret>'
+   ```
+
+   > **Warning:** The file `k8s/ddp-secrets.yml` stores the values as base64. Base64 is not
+   > encryption. Do not commit real secret values. Use `kubectl create secret`, or a tool
+   > such as Sealed Secrets, for real values.
+
+3. Apply the manifests:
+
+   ```bash
+   kubectl apply -k k8s/
+   ```
+
+4. Check the pods. The application pod becomes ready after the first refresh cycle:
+
+   ```bash
+   kubectl -n ddp get pods
+   ```
+
+5. Open the application from your computer:
+
+   ```bash
+   kubectl -n ddp port-forward svc/ddp-service 8080:80
+   curl -i http://localhost:8080/version
+   ```
+
+   Port-forward works without a load balancer. The service type is `LoadBalancer`.
+   On KIND, a `LoadBalancer` service stays in `<pending>` until you install a load
+   balancer implementation, such as cloud-provider-kind or MetalLB.
+
+The deployment uses the image `ghcr.io/bourbonbourbon/ddp:0.4.4`. The image must exist in GHCR.
+To use a local image, change the image name in `k8s/ddp/ddp-deployment.yml`, load the
+image into KIND with `kind load docker-image ddp:test`, and set `imagePullPolicy` to `IfNotPresent`.
+
+### Limitations of the KIND setup
+
+- **RustFS storage uses `hostPath`.** The PersistentVolume stores data at `/mnt/data`
+  on the KIND node. It works only on one node. The data stays on that node and is lost
+  when the KIND cluster is deleted. This is acceptable for a test. Do not use it in production.
+  The path is inside the KIND node container, not on your computer.
+- **Valkey has no persistent storage.** The Valkey deployment uses an `emptyDir` volume.
+  The cache is empty after a pod restart. The service refills the cache on the next refresh.
+- **The Valkey manifests are in `k8s/valkey/`.** The Valkey service name is `valkey-service`.
+- **The service type is `LoadBalancer`.** See the local KIND setup above.
+- **The Secret file is for local tests only.** Replace it before you use the cluster for anything else.
 
 ## CI
 
 The workflow `.github/workflows/main.yml` runs on each push to `main`.
-It has these jobs in this order:
+The jobs run in this order:
 
 1. `lint`: runs pylint and Hadolint.
-2. `unittests`: starts Valkey and runs pytest.
-3. `build`: builds the image and pushes it to GHCR.
-4. `version-check`: runs the image and compares `/version` with `src/version.py`.
+2. `unittests`: starts Valkey and RustFS with Compose, and runs pytest with coverage.
+3. `integration-tests`: starts Valkey and RustFS with Compose, and runs the integration tests.
+4. `build`: builds the image and pushes it to GHCR. It runs after the test jobs.
+5. `version-check`: runs the image and compares `/version` with `src/version.py`.
 
 Two more workflows run security checks:
 
 - `scorecard.yml`: OpenSSF Scorecard analysis.
 - `terrascan.yml`: Terrascan scan of the files in `k8s/`.
 
+CI reads the `.env` file from the repository secret `DOTENV`.
+
 ## Project layout
 
 ```
 .
-├── .github/workflows/   CI and security workflows
-├── k8s/                 Kubernetes manifests
+├── .github/workflows/        CI and security workflows
+├── k8s/                      Kubernetes manifests (kustomization.yml, ddp/, rustfs/, valkey/)
 ├── src/
-│   ├── app.py           Flask application, scheduler, and endpoints
-│   ├── version.py       Application version
+│   ├── app.py                Flask application, scheduler, and endpoints
+│   ├── version.py            Application version
 │   └── services/
 │       └── opensensemap.py   Client for the openSenseMap API
 ├── tests/
-│   └── test_app.py      Unit tests
+│   ├── integration/          Integration tests with real Valkey and RustFS
+│   └── test_app.py           Unit tests
 ├── Dockerfile
+├── docker-compose.yml
+├── kind.yaml                 KIND cluster configuration
 ├── pytest.ini
-├── requirements.txt
-└── requirements-test.txt
+├── .coveragerc
+├── requirements.txt          Runtime packages (hashes)
+└── requirements-test.txt     Test and lint packages (hashes)
 ```
-
-## Project status
-
-Done:
-
-- [x] `/version`, `/temperature`, `/store`, `/readyz`, and `/metrics` endpoints
-- [x] Valkey cache and RustFS storage (S3 API with `boto3`)
-- [x] Background scheduler (no cron)
-- [x] Custom Prometheus metrics
-- [x] Unit tests, pylint, and Hadolint in CI
-- [x] Docker image on GHCR
-- [x] OpenSSF Scorecard and Terrascan workflows
-- [x] Docker Compose for the app, Valkey, and RustFS
-- [x] `/cache` endpoint
-- [x] Integration tests with real Valkey and RustFS
-- [x] Remove `.env` from the repository and from the image
-
-Open:
-
-- [ ] Replace the Pod with a Deployment, and add readiness and liveness probes
-- [ ] Valkey manifests
-- [ ] Helm chart and Kustomize manifests
-- [ ] Image scanning (Trivy), SonarQube or Semgrep, Dependabot
-- [ ] Build job only on `main` or on version tags
-- [ ] Terraform for the Kubernetes cluster
-- [ ] Grafana for logs and metrics
-- [ ] End-to-end tests with Venom
-- [ ] Continuous delivery with Argo CD, ExternalDNS, and Cert-Manager
 
 ## Known limitations
 
 - Each application instance has its own scheduler and its own readiness data.
 - If Valkey is not available, `/temperature` returns `503`. It does not fetch data directly.
 - The service stores error results in RustFS. It does not store them in Valkey.
+- The Kubernetes storage uses `hostPath`. See the KIND limitations above.
+
+## Project status
+
+Done:
+
+- [x] `/version`, `/temperature`, `/store`, `/cache`, `/readyz`, and `/metrics` endpoints
+- [x] Valkey cache and RustFS storage (S3 API with `boto3`)
+- [x] Background scheduler (no cron)
+- [x] Custom Prometheus metrics
+- [x] Unit tests, integration tests, pylint, and Hadolint in CI
+- [x] Docker image on GHCR
+- [x] OpenSSF Scorecard and Terrascan workflows
+- [x] Docker Compose for the app, Valkey, and RustFS
+- [x] Kubernetes manifests for the application, RustFS, and Valkey
+
+Open:
+
+- [ ] Helm chart and Kustomize manifests for the infrastructure
+- [ ] Remove the test Secret file from Git and use a Secret tool for real values
+- [ ] Persistent storage for RustFS and Valkey on a real cluster
+- [ ] Image scanning (Trivy), SonarQube or Semgrep, Dependabot alerts
+- [ ] Build job only on `main` or on version tags
+- [ ] Terraform for the Kubernetes cluster
+- [ ] Grafana for logs and metrics
+- [ ] End-to-end tests with Venom
+- [ ] Continuous delivery with Argo CD, ExternalDNS, and Cert-Manager
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE`.
+
+## Security
+
+See `SECURITY.md` for how to report a vulnerability.
