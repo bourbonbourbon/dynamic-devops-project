@@ -69,7 +69,7 @@ spec:
       containers:
         - name: ddp
           image: ghcr.io/bourbonbourbon/ddp:0.4.4
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
