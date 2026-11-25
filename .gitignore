@@ -5,3 +5,4 @@ venv
 coverage.xml
 htmlcov/
 .env
+rustfs-data/
