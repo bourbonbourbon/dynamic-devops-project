@@ -1,8 +1,19 @@
+# PersistentVolume for RustFS data.
+#
+# Limitation: hostPath stores the data on the local disk of one node.
+# It works only on a single node. If the node is removed, the data is lost.
+# A pod on another node cannot use this volume.
+# This is acceptable for a KIND test cluster. Do not use it in production.
+#
+# In KIND, /mnt/data is a path inside the KIND node container.
+# It is not a path on your computer.
+#
+# For a real cluster, use a storage class that fits your provider,
+# such as a cloud disk or a network volume.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: rustfs-pv
-  namespace: ddp
 spec:
   capacity:
     storage: 1Gi
@@ -12,3 +23,4 @@ spec:
   storageClassName: manual
   hostPath:
     path: /mnt/data
+    type: DirectoryOrCreate
