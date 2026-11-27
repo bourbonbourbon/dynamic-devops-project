@@ -12,9 +12,9 @@ boto3==1.44.5 \
     --hash=sha256:667b344e25d2bcbb7c42fcf6b92a07bb1d73ee9d6d12c3a7873ec4c490b6fb64 \
     --hash=sha256:70c3e0409794b29ec1900bcaff0695b73234a2d32ffaed35045b94caa26212a5
     # via -r requirements.in
-botocore==1.44.5 \
-    --hash=sha256:8f16a56d1dff125dd65322ae021efa7ba5195a6db5102b96862566055b748921 \
-    --hash=sha256:a988f39e3a4484def0b8010f41128f71157da0515a4804fccce4739aa8f216da
+botocore==1.44.11 \
+    --hash=sha256:441c5ebbad9bb2911120d12bda448d4b55793fc52fc7425d9392ebb02f4814a4 \
+    --hash=sha256:c889792a88e04cc9f0b6eebc742112e5edb2710fe932f4c9a3ba784f92f09d75
     # via
     #   -r requirements.in
     #   boto3
