@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Run Terrascan
       id: terrascan
-      uses: tenable/terrascan-action@3a6e87da8e244513bd77b631e624552643f794c6 # v1.4.1
+      uses: tenable/terrascan-action@dd7e921056c6f25b25bff3cf791e063ed7fc3a78 # v1.5.0
       with:
         iac_type: 'k8s'
         iac_version: 'v1'
